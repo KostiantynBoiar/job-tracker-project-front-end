@@ -1,28 +1,38 @@
+/* LIGHT MODE (Default) */
 :root {
-  /* WCAG AA Compliant Colors */
-  --bg-primary: #121212;   /* Deep Grey (Easier on eyes than black) */
-  --bg-secondary: #1E1E1E; /* Card Background */
-  --text-primary: #FFFFFF; /* 15:1 Contrast Ratio */
-  --text-secondary: #B0B0B0;
-  
-  /* Brand & Actions */
-  --accent-color: #00E5FF; /* Cyan - Highly visible */
-  --accent-hover: #00B8D4;
-  --border-color: #333333;
-  
-  /* Accessibility Focus Ring (The "Neon Border" from your Spec) */
-  --focus-ring: 3px solid #FFFF00;
+  --bg-primary: #ffffff;
+  --bg-secondary: #f4f4f5;
+  --text-primary: #18181b;
+  --text-secondary: #71717a;
+  --border-color: #e4e4e7;
+  --accent-color: #3b82f6; 
+  --danger-color: #ef4444;
+}
+
+/* DARK MODE */
+[data-theme='dark'] {
+  --bg-primary: #09090b;
+  --bg-secondary: #18181b;
+  --text-primary: #f4f4f5;
+  --text-secondary: #a1a1aa;
+  --border-color: #27272a;
+  --accent-color: #3b82f6; 
+  --danger-color: #ef4444;
 }
 
 body {
   background-color: var(--bg-primary);
   color: var(--text-primary);
-  font-family: 'Inter', sans-serif;
-  margin: 0;
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
-/* Force visible focus for keyboard users */
-button:focus-visible, input:focus-visible, a:focus-visible {
-  outline: var(--focus-ring);
-  outline-offset: 2px;
+.divider {
+  display: flex;
+  align-items: center;
+}
+.divider::before,
+.divider::after {
+  content: "";
+  flex: 1;
+  border-bottom: 1px solid var(--border-color);
 }

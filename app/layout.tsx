@@ -3,6 +3,7 @@ import './globals.css';
 import '../src/styles/variables.css';
 import LayoutWrapper from '../src/components/common/Layout/LayoutWrapper';
 import { AuthProvider } from '../src/contexts/AuthContext';
+import { ThemeProvider } from '../src/contexts/ThemeContext'; // <-- ADD THIS
 
 export const metadata: Metadata = {
   title: 'FAANG Vacancy Tracker',
@@ -17,11 +18,13 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
-        <AuthProvider>
-          <LayoutWrapper>
-            {children}
-          </LayoutWrapper>
-        </AuthProvider>
+        <ThemeProvider>
+          <AuthProvider>
+            <LayoutWrapper>
+              {children}
+            </LayoutWrapper>
+          </AuthProvider>
+        </ThemeProvider>
       </body>
     </html>
   );
