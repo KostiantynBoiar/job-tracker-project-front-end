@@ -3,7 +3,6 @@
 import React, { createContext, useState, useEffect, ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 
-// Define the shape of our User and Context
 interface User {
   id: string;
   email: string;
@@ -15,6 +14,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (token: string, userData: User) => void;
+  loginWithTokens: (accessToken: string, refreshToken: string, userData: User) => void;
   logout: () => void;
 }
 
@@ -23,6 +23,7 @@ export const AuthContext = createContext<AuthContextType>({
   isAuthenticated: false,
   isLoading: true,
   login: () => {},
+  loginWithTokens: () => {},
   logout: () => {},
 });
 
@@ -31,7 +32,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
 
-  // On page load, check if they already have a token saved
   useEffect(() => {
     const token = localStorage.getItem('accessToken');
     const savedUser = localStorage.getItem('user');
@@ -46,18 +46,35 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     localStorage.setItem('accessToken', token);
     localStorage.setItem('user', JSON.stringify(userData));
     setUser(userData);
-    router.push('/jobs'); // Redirect to dashboard after login
+    router.push('/jobs');
+  };
+
+  const loginWithTokens = (accessToken: string, refreshToken: string, userData: User) => {
+    localStorage.setItem('accessToken', accessToken);
+    localStorage.setItem('refreshToken', refreshToken);
+    localStorage.setItem('user', JSON.stringify(userData));
+    setUser(userData);
   };
 
   const logout = () => {
     localStorage.removeItem('accessToken');
+    localStorage.removeItem('refreshToken');
     localStorage.removeItem('user');
     setUser(null);
-    router.push('/login'); // Redirect to login
+    router.push('/login');
+  };
+
+  const value = {
+    user,
+    isAuthenticated: !!user,
+    isLoading,
+    login,
+    loginWithTokens,
+    logout,
   };
 
   return (
-    <AuthContext.Provider value={{ user, isAuthenticated: !!user, isLoading, login, logout }}>
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   );
