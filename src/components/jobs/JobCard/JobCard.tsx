@@ -1,38 +1,94 @@
 import React from 'react';
-import { Job } from '@/types/job'; 
-import { Bookmark, ExternalLink, MapPin, Calendar, DollarSign } from 'lucide-react';
+import { Job } from '../../../api/jobs';
+import { Bookmark, ExternalLink, MapPin, Calendar, DollarSign, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 
 interface JobCardProps {
   job: Job;
+  isSaved?: boolean;
+  isSaving?: boolean;
+  onToggleSave?: (jobId: number) => void;
 }
 
-const JobCard: React.FC<JobCardProps> = ({ job }) => {
+const JobCard: React.FC<JobCardProps> = ({ job, isSaved = false, isSaving = false, onToggleSave }) => {
+
+  const formatSalary = (): string | null => {
+    if (!job.salary_min && !job.salary_max) return null;
+    const currency = job.salary_currency || '$';
+    const min = job.salary_min ? `${job.salary_min.toLocaleString()}` : '';
+    const max = job.salary_max ? `${job.salary_max.toLocaleString()}` : '';
+    if (min && max) return `${currency}${min} - ${currency}${max}`;
+    return `${currency}${min || max}`;
+  };
+
+
+  const formatLocation = (): string => {
+    if (job.is_remote) return 'Remote';
+    if (!job.location) return 'Not specified';
+    const parts = [job.location.city, job.location.country].filter(Boolean);
+    return parts.join(', ') || 'Not specified';
+  };
+
+
+  const formatPostedDate = (): string => {
+    if (!job.posted_at) return 'Recently';
+    const date = new Date(job.posted_at);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+    
+    if (diffDays === 0) return 'Today';
+    if (diffDays === 1) return 'Yesterday';
+    if (diffDays < 7) return `${diffDays} days ago`;
+    if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`;
+    return `${Math.floor(diffDays / 30)} months ago`;
+  };
+
+  const salary = formatSalary();
+
   return (
     <article style={styles.card}>
       <div style={styles.header}>
-        <div>
-          <h3 style={styles.title}>{job.title}</h3>
-          <p style={styles.company}>{job.company}</p>
+        <div style={styles.companyLogo}>
+          {job.company.logo_url ? (
+            <img src={job.company.logo_url} alt={job.company.name} style={styles.logoImg} />
+          ) : (
+            job.company.name.charAt(0)
+          )}
         </div>
-        <button 
-          style={styles.saveButton} 
-          aria-label={job.isSaved ? "Remove from saved jobs" : "Save this job"}
-        >
-          <Bookmark size={20} fill={job.isSaved ? "currentColor" : "none"} />
-        </button>
+        <div style={styles.headerInfo}>
+          <h3 style={styles.title}>{job.title}</h3>
+          <p style={styles.company}>{job.company.name}</p>
+        </div>
+        {onToggleSave && (
+          <button 
+            style={{
+              ...styles.saveButton,
+              ...(isSaved ? styles.saveButtonSaved : {}),
+            }}
+            onClick={() => onToggleSave(job.id)}
+            disabled={isSaving}
+            aria-label={isSaved ? "Remove from saved jobs" : "Save this job"}
+          >
+            {isSaving ? (
+              <Loader2 size={20} style={{ animation: 'spin 1s linear infinite' }} />
+            ) : (
+              <Bookmark size={20} fill={isSaved ? "currentColor" : "none"} />
+            )}
+          </button>
+        )}
       </div>
 
       <div style={styles.metaContainer}>
         <span style={styles.metaItem}>
-          <MapPin size={14} style={{ marginRight: 4 }} /> {job.location}
+          <MapPin size={14} style={{ marginRight: 4 }} /> {formatLocation()}
         </span>
         <span style={styles.metaItem}>
-          <Calendar size={14} style={{ marginRight: 4 }} /> {job.postedDate}
+          <Calendar size={14} style={{ marginRight: 4 }} /> {formatPostedDate()}
         </span>
-        {job.salary && (
+        {salary && (
           <span style={styles.metaItem}>
-            <DollarSign size={14} style={{ marginRight: 4 }} /> {job.salary}
+            <DollarSign size={14} style={{ marginRight: 4 }} /> {salary}
           </span>
         )}
       </div>
@@ -43,11 +99,11 @@ const JobCard: React.FC<JobCardProps> = ({ job }) => {
         </Link>
         
         <a 
-          href={job.sourceUrl} 
+          href={job.external_url} 
           target="_blank" 
           rel="noopener noreferrer" 
           style={styles.applyButton}
-          aria-label={`Apply for ${job.title} at ${job.company} (Opens in new tab)`}
+          aria-label={`Apply for ${job.title} at ${job.company.name} (Opens in new tab)`}
         >
           Apply Now <ExternalLink size={16} style={{ marginLeft: 6 }} />
         </a>
@@ -67,9 +123,32 @@ const styles: { [key: string]: React.CSSProperties } = {
   },
   header: {
     display: 'flex',
-    justifyContent: 'space-between',
     alignItems: 'flex-start',
+    gap: '16px',
     marginBottom: '12px',
+  },
+  companyLogo: {
+    width: '48px',
+    height: '48px',
+    backgroundColor: 'var(--bg-primary)',
+    border: '1px solid var(--border-color)',
+    borderRadius: '8px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontSize: '20px',
+    fontWeight: 700,
+    color: 'var(--text-primary)',
+    overflow: 'hidden',
+    flexShrink: 0,
+  },
+  logoImg: {
+    width: '100%',
+    height: '100%',
+    objectFit: 'cover',
+  },
+  headerInfo: {
+    flex: 1,
   },
   title: {
     fontSize: '1.25rem',
@@ -78,17 +157,25 @@ const styles: { [key: string]: React.CSSProperties } = {
   },
   company: {
     fontSize: '1rem',
-    color: 'var(--accent-color)', // Cyan for visibility
+    color: 'var(--accent-color)',
     margin: 0,
     fontWeight: 600,
   },
   saveButton: {
     background: 'none',
-    border: 'none',
+    border: '1px solid var(--border-color)',
+    borderRadius: '8px',
     color: 'var(--text-secondary)',
     cursor: 'pointer',
     padding: '8px',
-    borderRadius: '4px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  saveButtonSaved: {
+    backgroundColor: 'var(--accent-color)',
+    borderColor: 'var(--accent-color)',
+    color: '#000',
   },
   metaContainer: {
     display: 'flex',
@@ -124,7 +211,7 @@ const styles: { [key: string]: React.CSSProperties } = {
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: 'var(--accent-color)',
-    color: '#000', // Black on Cyan is High Contrast
+    color: '#000',
     borderRadius: '6px',
     textDecoration: 'none',
     fontWeight: 'bold',

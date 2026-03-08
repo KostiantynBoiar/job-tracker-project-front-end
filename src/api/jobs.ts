@@ -55,18 +55,37 @@ export interface SavedJob {
   saved_at: string;
 }
 
+export interface PaginatedResponse<T> {
+  count: number;
+  next: string | null;
+  previous: string | null;
+  results: T[];
+}
+
+export interface GetJobsParams {
+  page?: number;
+  pageSize?: number;
+  sortBy?: 'preference' | 'date' | 'salary' | 'company';
+  order?: 'asc' | 'desc';
+}
+
 // ============ API Functions ============
 
 /**
- * Get all jobs with optional sorting
+ * Get jobs with pagination and optional sorting
  */
-export const getJobs = async (
-  sortBy: 'preference' | 'date' | 'salary' | 'company' = 'date',
-  order: 'asc' | 'desc' = 'desc'
-): Promise<Job[]> => {
+export const getJobs = async (params: GetJobsParams = {}): Promise<PaginatedResponse<Job>> => {
+  const { page = 1, pageSize = 20, sortBy = 'date', order = 'desc' } = params;
+  
   const response = await apiClient.get('/api/jobs/', {
-    params: { sort_by: sortBy, order },
+    params: { 
+      page,
+      page_size: pageSize,
+      sort_by: sortBy, 
+      order 
+    },
   });
+  
   return response.data;
 };
 
@@ -83,7 +102,7 @@ export const getJobById = async (jobId: number): Promise<Job> => {
  */
 export const getSavedJobs = async (): Promise<SavedJob[]> => {
   const response = await apiClient.get('/api/jobs/saved/');
-  return response.data;
+  return response.data.results || response.data;
 };
 
 /**

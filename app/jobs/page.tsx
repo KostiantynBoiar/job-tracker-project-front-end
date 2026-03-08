@@ -1,79 +1,11 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { Search, Filter, X, Bookmark, MapPin, Calendar, DollarSign, ExternalLink } from 'lucide-react';
+import { Search, Filter, X, Bookmark, MapPin, Calendar, DollarSign, ExternalLink, Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
+import { getJobs, getSavedJobs, saveJob, unsaveJob, Job, SavedJob } from '../../src/api/jobs';
+import ProtectedRoute from '../../src/components/auth/ProtectedRoute/ProtectedRoute';
 
-// 假数据
-const MOCK_JOBS = [
-  {
-    id: 1,
-    title: 'Senior Software Engineer',
-    company: { name: 'Apple', logo_url: null },
-    location: { city: 'London', country: 'UK' },
-    is_remote: false,
-    posted_at: '2026-02-25T10:00:00Z',
-    salary_min: 120000,
-    salary_max: 160000,
-    salary_currency: '£',
-    employment_type: 'full_time',
-    external_url: 'https://apple.com/careers',
-  },
-  {
-    id: 2,
-    title: 'AI Research Scientist',
-    company: { name: 'Google', logo_url: null },
-    location: { city: 'Mountain View', country: 'USA' },
-    is_remote: true,
-    posted_at: '2026-02-24T10:00:00Z',
-    salary_min: 180000,
-    salary_max: 250000,
-    salary_currency: '$',
-    employment_type: 'full_time',
-    external_url: 'https://careers.google.com',
-  },
-  {
-    id: 3,
-    title: 'Frontend Developer',
-    company: { name: 'Meta', logo_url: null },
-    location: { city: 'London', country: 'UK' },
-    is_remote: false,
-    posted_at: '2026-02-23T10:00:00Z',
-    salary_min: 90000,
-    salary_max: 130000,
-    salary_currency: '£',
-    employment_type: 'full_time',
-    external_url: 'https://metacareers.com',
-  },
-  {
-    id: 4,
-    title: 'Backend Engineer',
-    company: { name: 'Netflix', logo_url: null },
-    location: { city: 'Amsterdam', country: 'Netherlands' },
-    is_remote: false,
-    posted_at: '2026-02-22T10:00:00Z',
-    salary_min: 100000,
-    salary_max: 150000,
-    salary_currency: '€',
-    employment_type: 'full_time',
-    external_url: 'https://jobs.netflix.com',
-  },
-  {
-    id: 5,
-    title: 'ML Engineer',
-    company: { name: 'Nvidia', logo_url: null },
-    location: { city: 'San Francisco', country: 'USA' },
-    is_remote: true,
-    posted_at: '2026-02-21T10:00:00Z',
-    salary_min: 150000,
-    salary_max: 220000,
-    salary_currency: '$',
-    employment_type: 'full_time',
-    external_url: 'https://nvidia.com/careers',
-  },
-];
-
-const COMPANIES = ['Apple', 'Google', 'Meta', 'Netflix', 'Nvidia'];
 const EMPLOYMENT_TYPES = [
   { value: 'full_time', label: 'Full-time' },
   { value: 'part_time', label: 'Part-time' },
@@ -81,32 +13,98 @@ const EMPLOYMENT_TYPES = [
   { value: 'internship', label: 'Internship' },
 ];
 
+const PAGE_SIZE_OPTIONS = [10, 20, 50, 100];
+
 export default function JobsPage() {
   const router = useRouter();
   
-  const [jobs] = useState(MOCK_JOBS);
-  const [savedJobIds, setSavedJobIds] = useState<number[]>([]);
+  // Data state
+  const [jobs, setJobs] = useState<Job[]>([]);
+  const [totalCount, setTotalCount] = useState(0);
+  const [savedJobs, setSavedJobs] = useState<SavedJob[]>([]);
+  const [companies, setCompanies] = useState<string[]>([]);
+  
+  // Loading/error state
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [savingJobId, setSavingJobId] = useState<number | null>(null);
+  
+  // Filter state
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCompanies, setSelectedCompanies] = useState<string[]>([]);
   const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
-  const [sortBy, setSortBy] = useState('date');
+  const [sortBy, setSortBy] = useState<'date' | 'salary' | 'company'>('date');
   const [showMobileFilters, setShowMobileFilters] = useState(false);
+  
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
+
+  // Fetch jobs with server-side pagination
+  const fetchJobs = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      
+      const [jobsResponse, savedJobsData] = await Promise.all([
+        getJobs({ page: currentPage, pageSize, sortBy, order: 'desc' }),
+        getSavedJobs(),
+      ]);
+      
+      setJobs(jobsResponse.results);
+      setTotalCount(jobsResponse.count);
+      setSavedJobs(savedJobsData);
+      
+      // Extract unique company names for filters from current page
+      const uniqueCompanies = [...new Set(jobsResponse.results.map(job => job.company.name))].sort();
+      setCompanies(prev => {
+        const merged = [...new Set([...prev, ...uniqueCompanies])].sort();
+        return merged;
+      });
+    } catch (err) {
+      console.error('Failed to fetch jobs:', err);
+      setError('Failed to load jobs. Please try again later.');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [currentPage, pageSize, sortBy]);
+
+  useEffect(() => {
+    fetchJobs();
+  }, [fetchJobs]);
+
+  // Reset to page 1 when page size changes
+  const handlePageSizeChange = (newSize: number) => {
+    setPageSize(newSize);
+    setCurrentPage(1);
+  };
 
   // Check if job is saved
-  const isJobSaved = (jobId: number): boolean => {
-    return savedJobIds.includes(jobId);
+  const getSavedJob = (jobId: number): SavedJob | undefined => {
+    return savedJobs.find((sj) => sj.job.id === jobId);
   };
 
   // Toggle save job
-  const handleToggleSave = (jobId: number) => {
-    if (savedJobIds.includes(jobId)) {
-      setSavedJobIds(savedJobIds.filter(id => id !== jobId));
-    } else {
-      setSavedJobIds([...savedJobIds, jobId]);
+  const handleToggleSave = async (jobId: number) => {
+    const savedJob = getSavedJob(jobId);
+    setSavingJobId(jobId);
+
+    try {
+      if (savedJob) {
+        await unsaveJob(savedJob.id);
+        setSavedJobs(savedJobs.filter((sj) => sj.id !== savedJob.id));
+      } else {
+        const newSavedJob = await saveJob(jobId);
+        setSavedJobs([...savedJobs, newSavedJob]);
+      }
+    } catch (err) {
+      console.error('Failed to toggle save:', err);
+    } finally {
+      setSavingJobId(null);
     }
   };
 
-  // Filter jobs
+  // Filter jobs (client-side filtering on current page results)
   const filteredJobs = useMemo(() => {
     return jobs.filter((job) => {
       if (searchQuery) {
@@ -114,7 +112,8 @@ export default function JobsPage() {
         const matchesSearch =
           job.title.toLowerCase().includes(query) ||
           job.company.name.toLowerCase().includes(query) ||
-          (job.location?.city?.toLowerCase().includes(query) ?? false);
+          (job.location?.city?.toLowerCase().includes(query) ?? false) ||
+          (job.location?.country?.toLowerCase().includes(query) ?? false);
         if (!matchesSearch) return false;
       }
 
@@ -129,6 +128,41 @@ export default function JobsPage() {
       return true;
     });
   }, [jobs, searchQuery, selectedCompanies, selectedTypes]);
+
+  // Pagination calculations (server-side)
+  const totalPages = Math.ceil(totalCount / pageSize);
+  const startIndex = (currentPage - 1) * pageSize + 1;
+  const endIndex = Math.min(currentPage * pageSize, totalCount);
+
+  // Generate page numbers to display
+  const getPageNumbers = () => {
+    const pages: (number | string)[] = [];
+    const maxVisiblePages = 5;
+    
+    if (totalPages <= maxVisiblePages) {
+      for (let i = 1; i <= totalPages; i++) {
+        pages.push(i);
+      }
+    } else {
+      if (currentPage <= 3) {
+        for (let i = 1; i <= 4; i++) pages.push(i);
+        pages.push('...');
+        pages.push(totalPages);
+      } else if (currentPage >= totalPages - 2) {
+        pages.push(1);
+        pages.push('...');
+        for (let i = totalPages - 3; i <= totalPages; i++) pages.push(i);
+      } else {
+        pages.push(1);
+        pages.push('...');
+        for (let i = currentPage - 1; i <= currentPage + 1; i++) pages.push(i);
+        pages.push('...');
+        pages.push(totalPages);
+      }
+    }
+    
+    return pages;
+  };
 
   // Toggle filter
   const toggleFilter = (
@@ -153,7 +187,7 @@ export default function JobsPage() {
   const hasActiveFilters = selectedCompanies.length > 0 || selectedTypes.length > 0 || searchQuery !== '';
 
   // Format salary
-  const formatSalary = (job: typeof MOCK_JOBS[0]): string | null => {
+  const formatSalary = (job: Job): string | null => {
     if (!job.salary_min && !job.salary_max) return null;
     const currency = job.salary_currency || '$';
     const min = job.salary_min ? `${job.salary_min.toLocaleString()}` : '';
@@ -163,10 +197,11 @@ export default function JobsPage() {
   };
 
   // Format location
-  const formatLocation = (job: typeof MOCK_JOBS[0]): string => {
+  const formatLocation = (job: Job): string => {
     if (job.is_remote) return 'Remote';
     if (!job.location) return 'Not specified';
-    return `${job.location.city}, ${job.location.country}`;
+    const parts = [job.location.city, job.location.country].filter(Boolean);
+    return parts.join(', ') || 'Not specified';
   };
 
   // Format posted date
@@ -180,7 +215,8 @@ export default function JobsPage() {
     if (diffDays === 0) return 'Today';
     if (diffDays === 1) return 'Yesterday';
     if (diffDays < 7) return `${diffDays} days ago`;
-    return `${Math.floor(diffDays / 7)} weeks ago`;
+    if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`;
+    return `${Math.floor(diffDays / 30)} months ago`;
   };
 
   // Sidebar filters
@@ -197,17 +233,21 @@ export default function JobsPage() {
 
       <div style={styles.filterGroup}>
         <h3 style={styles.filterGroupTitle}>Company</h3>
-        {COMPANIES.map((company) => (
-          <label key={company} style={styles.checkboxLabel}>
-            <input
-              type="checkbox"
-              checked={selectedCompanies.includes(company)}
-              onChange={() => toggleFilter(company, selectedCompanies, setSelectedCompanies)}
-              style={styles.checkbox}
-            />
-            <span>{company}</span>
-          </label>
-        ))}
+        {companies.length > 0 ? (
+          companies.map((company) => (
+            <label key={company} style={styles.checkboxLabel}>
+              <input
+                type="checkbox"
+                checked={selectedCompanies.includes(company)}
+                onChange={() => toggleFilter(company, selectedCompanies, setSelectedCompanies)}
+                style={styles.checkbox}
+              />
+              <span>{company}</span>
+            </label>
+          ))
+        ) : (
+          <p style={styles.noFiltersText}>No companies available</p>
+        )}
       </div>
 
       <div style={styles.filterGroup}>
@@ -228,28 +268,38 @@ export default function JobsPage() {
   );
 
   // Job Card
-  const JobCard = ({ job }: { job: typeof MOCK_JOBS[0] }) => {
-    const saved = isJobSaved(job.id);
+  const JobCard = ({ job }: { job: Job }) => {
+    const savedJob = getSavedJob(job.id);
+    const isSaved = !!savedJob;
+    const isSaving = savingJobId === job.id;
     const salary = formatSalary(job);
 
     return (
       <article style={styles.card}>
         <div style={styles.cardHeader}>
-          <div style={styles.companyLogo}>
-            {job.company.name.charAt(0)}
-          </div>
+          {job.company.logo_url && (
+            <div style={styles.companyLogo}>
+              <img src={job.company.logo_url} alt={job.company.name} style={styles.logoImg} />
+            </div>
+          )}
           <div style={styles.cardInfo}>
             <h3 style={styles.cardTitle}>{job.title}</h3>
             <p style={styles.cardCompany}>{job.company.name}</p>
           </div>
           <button
             onClick={() => handleToggleSave(job.id)}
+            disabled={isSaving}
             style={{
               ...styles.saveButton,
-              ...(saved ? styles.saveButtonSaved : {}),
+              ...(isSaved ? styles.saveButtonSaved : {}),
             }}
+            aria-label={isSaved ? 'Remove from saved' : 'Save job'}
           >
-            <Bookmark size={20} fill={saved ? 'currentColor' : 'none'} />
+            {isSaving ? (
+              <Loader2 size={20} style={{ animation: 'spin 1s linear infinite' }} />
+            ) : (
+              <Bookmark size={20} fill={isSaved ? 'currentColor' : 'none'} />
+            )}
           </button>
         </div>
 
@@ -287,106 +337,186 @@ export default function JobsPage() {
     );
   };
 
-  return (
-    <div style={styles.pageContainer}>
-      {/* Sidebar */}
-      <aside style={styles.sidebar}>
-        <FiltersContent />
-      </aside>
+  // Loading state
+  if (isLoading) {
+    return (
+      <ProtectedRoute>
+        <div style={styles.loadingContainer}>
+          <Loader2 size={48} style={{ animation: 'spin 1s linear infinite', color: '#3b82f6' }} />
+          <p style={styles.loadingText}>Loading jobs...</p>
+        </div>
+      </ProtectedRoute>
+    );
+  }
 
-      {/* Main Content */}
-      <main style={styles.mainContent}>
-        {/* Search Bar */}
-        <div style={styles.searchRow}>
-          <div style={styles.searchInputWrapper}>
-            <Search size={18} style={styles.searchIcon} />
-            <input
-              type="text"
-              placeholder="Search jobs, companies, locations..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              style={styles.searchInput}
-            />
-            {searchQuery && (
-              <button onClick={() => setSearchQuery('')} style={styles.clearSearchButton}>
-                <X size={16} />
-              </button>
-            )}
-          </div>
-
-          <select
-            value={sortBy}
-            onChange={(e) => setSortBy(e.target.value)}
-            style={styles.sortSelect}
+  // Error state
+  if (error) {
+    return (
+      <ProtectedRoute>
+        <div style={styles.errorContainer}>
+          <h2 style={styles.errorTitle}>Something went wrong</h2>
+          <p style={styles.errorText}>{error}</p>
+          <button 
+            onClick={() => window.location.reload()} 
+            style={styles.retryButton}
           >
-            <option value="date">Latest</option>
-            <option value="salary">Salary</option>
-            <option value="company">Company</option>
-          </select>
-
-          <button
-            onClick={() => setShowMobileFilters(true)}
-            style={styles.mobileFilterButton}
-          >
-            <Filter size={18} />
+            Try Again
           </button>
         </div>
+      </ProtectedRoute>
+    );
+  }
 
-        {/* Results Count */}
-        <p style={styles.resultsText}>
-          Showing <strong>{filteredJobs.length}</strong> of {jobs.length} jobs
-          {hasActiveFilters && ' (filtered)'}
-        </p>
+  return (
+    <ProtectedRoute>
+      <div style={styles.pageContainer}>
+        {/* Sidebar */}
+        <aside style={styles.sidebar}>
+          <FiltersContent />
+        </aside>
 
-        {/* Job List */}
-        <div style={styles.jobList}>
-          {filteredJobs.length > 0 ? (
-            filteredJobs.map((job) => <JobCard key={job.id} job={job} />)
-          ) : (
-            <div style={styles.noResults}>
-              <p>No jobs found matching your criteria.</p>
-              {hasActiveFilters && (
-                <button onClick={clearFilters} style={styles.clearFiltersButton}>
-                  Clear filters
+        {/* Main Content */}
+        <main style={styles.mainContent}>
+          {/* Search Bar */}
+          <div style={styles.searchRow}>
+            <div style={styles.searchInputWrapper}>
+              <Search size={18} style={styles.searchIcon} />
+              <input
+                type="text"
+                placeholder="Search jobs, companies, locations..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                style={styles.searchInput}
+              />
+              {searchQuery && (
+                <button onClick={() => setSearchQuery('')} style={styles.clearSearchButton}>
+                  <X size={16} />
                 </button>
               )}
             </div>
-          )}
-        </div>
 
-        {/* Pagination */}
-        {filteredJobs.length > 0 && (
-          <div style={styles.pagination}>
-            <button style={styles.pageButton}>←</button>
-            <button style={{ ...styles.pageButton, ...styles.pageButtonActive }}>1</button>
-            <button style={styles.pageButton}>2</button>
-            <button style={styles.pageButton}>3</button>
-            <button style={styles.pageButton}>→</button>
-          </div>
-        )}
-      </main>
-
-      {/* Mobile Filters */}
-      {showMobileFilters && (
-        <div style={styles.mobileFiltersOverlay}>
-          <div style={styles.mobileFiltersModal}>
-            <div style={styles.mobileFiltersHeader}>
-              <h2>Filters</h2>
-              <button onClick={() => setShowMobileFilters(false)} style={styles.closeButton}>
-                <X size={24} />
-              </button>
-            </div>
-            <FiltersContent />
-            <button
-              onClick={() => setShowMobileFilters(false)}
-              style={styles.applyFiltersButton}
+            <select
+              value={sortBy}
+              onChange={(e) => {
+                setSortBy(e.target.value as 'date' | 'salary' | 'company');
+                setCurrentPage(1);
+              }}
+              style={styles.sortSelect}
             >
-              Apply Filters
+              <option value="date">Latest</option>
+              <option value="salary">Salary</option>
+              <option value="company">Company</option>
+            </select>
+
+            <select
+              value={pageSize}
+              onChange={(e) => handlePageSizeChange(Number(e.target.value))}
+              style={styles.sortSelect}
+            >
+              {PAGE_SIZE_OPTIONS.map(size => (
+                <option key={size} value={size}>{size} per page</option>
+              ))}
+            </select>
+
+            <button
+              onClick={() => setShowMobileFilters(true)}
+              style={styles.mobileFilterButton}
+            >
+              <Filter size={18} />
             </button>
           </div>
-        </div>
-      )}
-    </div>
+
+          {/* Results Count */}
+          <p style={styles.resultsText}>
+            Showing <strong>{startIndex}-{endIndex}</strong> of {totalCount} jobs
+            {hasActiveFilters && ` (${filteredJobs.length} matching filters on this page)`}
+          </p>
+
+          {/* Job List */}
+          <div style={styles.jobList}>
+            {filteredJobs.length > 0 ? (
+              filteredJobs.map((job) => <JobCard key={job.id} job={job} />)
+            ) : (
+              <div style={styles.noResults}>
+                <p>No jobs found matching your criteria.</p>
+                {hasActiveFilters && (
+                  <button onClick={clearFilters} style={styles.clearFiltersButton}>
+                    Clear filters
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div style={styles.pagination}>
+              <button
+                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                disabled={currentPage === 1}
+                style={{
+                  ...styles.pageButton,
+                  ...(currentPage === 1 ? styles.pageButtonDisabled : {}),
+                }}
+                aria-label="Previous page"
+              >
+                <ChevronLeft size={18} />
+              </button>
+              
+              {getPageNumbers().map((page, index) => (
+                typeof page === 'number' ? (
+                  <button
+                    key={index}
+                    onClick={() => setCurrentPage(page)}
+                    style={{
+                      ...styles.pageButton,
+                      ...(currentPage === page ? styles.pageButtonActive : {}),
+                    }}
+                  >
+                    {page}
+                  </button>
+                ) : (
+                  <span key={index} style={styles.pageEllipsis}>{page}</span>
+                )
+              ))}
+              
+              <button
+                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                disabled={currentPage === totalPages}
+                style={{
+                  ...styles.pageButton,
+                  ...(currentPage === totalPages ? styles.pageButtonDisabled : {}),
+                }}
+                aria-label="Next page"
+              >
+                <ChevronRight size={18} />
+              </button>
+            </div>
+          )}
+        </main>
+
+        {/* Mobile Filters */}
+        {showMobileFilters && (
+          <div style={styles.mobileFiltersOverlay}>
+            <div style={styles.mobileFiltersModal}>
+              <div style={styles.mobileFiltersHeader}>
+                <h2>Filters</h2>
+                <button onClick={() => setShowMobileFilters(false)} style={styles.closeButton}>
+                  <X size={24} />
+                </button>
+              </div>
+              <FiltersContent />
+              <button
+                onClick={() => setShowMobileFilters(false)}
+                style={styles.applyFiltersButton}
+              >
+                Apply Filters
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </ProtectedRoute>
   );
 }
 
@@ -395,6 +525,49 @@ const styles: { [key: string]: React.CSSProperties } = {
     display: 'flex',
     minHeight: '100vh',
     backgroundColor: '#0a0a0a',
+  },
+  loadingContainer: {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: '100vh',
+    backgroundColor: '#0a0a0a',
+    gap: '16px',
+  },
+  loadingText: {
+    color: '#888',
+    fontSize: '1rem',
+  },
+  errorContainer: {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: '100vh',
+    backgroundColor: '#0a0a0a',
+    padding: '24px',
+    textAlign: 'center',
+  },
+  errorTitle: {
+    color: '#fff',
+    fontSize: '1.5rem',
+    marginBottom: '8px',
+  },
+  errorText: {
+    color: '#888',
+    fontSize: '1rem',
+    marginBottom: '24px',
+  },
+  retryButton: {
+    padding: '12px 24px',
+    backgroundColor: '#3b82f6',
+    color: '#fff',
+    border: 'none',
+    borderRadius: '8px',
+    cursor: 'pointer',
+    fontWeight: 600,
+    fontSize: '1rem',
   },
   sidebar: {
     width: '280px',
@@ -445,6 +618,11 @@ const styles: { [key: string]: React.CSSProperties } = {
     height: '16px',
     cursor: 'pointer',
     accentColor: '#3b82f6',
+  },
+  noFiltersText: {
+    color: '#666',
+    fontSize: '0.85rem',
+    fontStyle: 'italic',
   },
   mainContent: {
     flex: 1,
@@ -554,6 +732,13 @@ const styles: { [key: string]: React.CSSProperties } = {
     fontSize: '20px',
     fontWeight: 700,
     color: '#fff',
+    overflow: 'hidden',
+    flexShrink: 0,
+  },
+  logoImg: {
+    width: '100%',
+    height: '100%',
+    objectFit: 'cover',
   },
   cardInfo: {
     flex: 1,
@@ -576,6 +761,9 @@ const styles: { [key: string]: React.CSSProperties } = {
     borderRadius: '8px',
     color: '#888',
     cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   saveButtonSaved: {
     backgroundColor: '#3b82f6',
@@ -627,25 +815,39 @@ const styles: { [key: string]: React.CSSProperties } = {
   pagination: {
     display: 'flex',
     justifyContent: 'center',
+    alignItems: 'center',
     gap: '8px',
     marginTop: '32px',
+    paddingBottom: '24px',
   },
   pageButton: {
-    width: '40px',
+    minWidth: '40px',
     height: '40px',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    border: '1px solid #333',
-    borderRadius: '6px',
+    borderWidth: '1px',
+    borderStyle: 'solid',
+    borderColor: '#333',
+    borderRadius: '8px',
     backgroundColor: '#111',
     color: '#fff',
     cursor: 'pointer',
     fontSize: '0.9rem',
+    fontWeight: 500,
+    transition: 'all 0.2s',
   },
   pageButtonActive: {
     backgroundColor: '#3b82f6',
     borderColor: '#3b82f6',
+  },
+  pageButtonDisabled: {
+    opacity: 0.5,
+    cursor: 'not-allowed',
+  },
+  pageEllipsis: {
+    color: '#666',
+    padding: '0 4px',
   },
   mobileFiltersOverlay: {
     position: 'fixed',
