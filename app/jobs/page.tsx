@@ -214,6 +214,10 @@ export default function JobsPage() {
     return `${Math.floor(diffDays / 30)} months ago`;
   };
 
+  const capitalizeFirst = (str: string): string => {
+    return str.charAt(0).toUpperCase() + str.slice(1);
+  };
+
   const FiltersContent = () => (
     <>
       <div style={styles.filterHeader}>
@@ -236,7 +240,7 @@ export default function JobsPage() {
                 onChange={() => handleFilterChange(company.name, selectedCompanies, setSelectedCompanies)}
                 style={styles.checkbox}
               />
-              <span>{company.name}</span>
+              <span>{capitalizeFirst(company.name)}</span>
             </label>
           ))
         ) : (
@@ -273,12 +277,12 @@ export default function JobsPage() {
         <div style={styles.cardHeader}>
           {job.company.logo_url && (
             <div style={styles.companyLogo}>
-              <img src={job.company.logo_url} alt={job.company.name} style={styles.logoImg} />
+              <img src={job.company.logo_url} alt={capitalizeFirst(job.company.name)} style={styles.logoImg} />
             </div>
           )}
           <div style={styles.cardInfo}>
             <h3 style={styles.cardTitle}>{job.title}</h3>
-            <p style={styles.cardCompany}>{job.company.name}</p>
+            <p style={styles.cardCompany}>{capitalizeFirst(job.company.name)}</p>
           </div>
           <button
             onClick={() => handleToggleSave(job.id)}
