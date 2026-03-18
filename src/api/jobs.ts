@@ -69,7 +69,7 @@ export interface GetJobsParams {
   order?: 'asc' | 'desc';
   search?: string;
   company?: string[];
-  employmentType?: string[];
+  isRemote?: boolean;
 }
 
 export interface CompanyOption {
@@ -92,10 +92,10 @@ export const getJobs = async (params: GetJobsParams = {}): Promise<PaginatedResp
     order = 'desc',
     search,
     company,
-    employmentType,
+    isRemote,
   } = params;
   
-  const queryParams: Record<string, string | number> = { 
+  const queryParams: Record<string, string | number | boolean> = { 
     page,
     page_size: pageSize,
     sort_by: sortBy, 
@@ -104,7 +104,7 @@ export const getJobs = async (params: GetJobsParams = {}): Promise<PaginatedResp
 
   if (search) queryParams.search = search;
   if (company && company.length > 0) queryParams.company_in = company.join(',');
-  if (employmentType && employmentType.length > 0) queryParams.employment_type_in = employmentType.join(',');
+  if (isRemote) queryParams.is_remote = true;
   
   const response = await apiClient.get('/api/jobs/', { params: queryParams });
   return response.data;

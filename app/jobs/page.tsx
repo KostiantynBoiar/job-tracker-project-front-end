@@ -6,13 +6,6 @@ import { Search, Filter, X, Bookmark, MapPin, Calendar, DollarSign, ExternalLink
 import { getJobs, getSavedJobs, saveJob, unsaveJob, getJobCompanies, Job, SavedJob, CompanyOption } from '../../src/api/jobs';
 import ProtectedRoute from '../../src/components/auth/ProtectedRoute/ProtectedRoute';
 
-const EMPLOYMENT_TYPES = [
-  { value: 'full_time', label: 'Full-time' },
-  { value: 'part_time', label: 'Part-time' },
-  { value: 'contract', label: 'Contract' },
-  { value: 'internship', label: 'Internship' },
-];
-
 const PAGE_SIZE_OPTIONS = [10, 20, 50, 100];
 
 export default function JobsPage() {
@@ -30,7 +23,7 @@ export default function JobsPage() {
   
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCompanies, setSelectedCompanies] = useState<string[]>([]);
-  const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
+  const [isRemoteOnly, setIsRemoteOnly] = useState(false);
   const [sortBy, setSortBy] = useState<'date' | 'salary' | 'company'>('date');
   const [showMobileFilters, setShowMobileFilters] = useState(false);
   
@@ -69,7 +62,7 @@ export default function JobsPage() {
           order: 'desc',
           search: searchQuery || undefined,
           company: selectedCompanies.length > 0 ? selectedCompanies : undefined,
-          employmentType: selectedTypes.length > 0 ? selectedTypes : undefined,
+          isRemote: isRemoteOnly || undefined,
         }),
         getSavedJobs(),
       ]);
@@ -84,7 +77,7 @@ export default function JobsPage() {
       setIsLoading(false);
       setIsFiltering(false);
     }
-  }, [currentPage, pageSize, sortBy, searchQuery, selectedCompanies, selectedTypes]);
+  }, [currentPage, pageSize, sortBy, searchQuery, selectedCompanies, isRemoteOnly]);
 
   useEffect(() => {
     if (isInitialMount.current) {
@@ -151,12 +144,12 @@ export default function JobsPage() {
 
   const clearFilters = () => {
     setSelectedCompanies([]);
-    setSelectedTypes([]);
+    setIsRemoteOnly(false);
     setSearchQuery('');
     setCurrentPage(1);
   };
 
-  const hasActiveFilters = selectedCompanies.length > 0 || selectedTypes.length > 0 || searchQuery !== '';
+  const hasActiveFilters = selectedCompanies.length > 0 || isRemoteOnly || searchQuery !== '';
 
   const totalPages = Math.ceil(totalCount / pageSize);
   const startIndex = totalCount > 0 ? (currentPage - 1) * pageSize + 1 : 0;
@@ -252,18 +245,19 @@ export default function JobsPage() {
       </div>
 
       <div style={styles.filterGroup}>
-        <h3 style={styles.filterGroupTitle}>Job Type</h3>
-        {EMPLOYMENT_TYPES.map((type) => (
-          <label key={type.value} style={styles.checkboxLabel}>
-            <input
-              type="checkbox"
-              checked={selectedTypes.includes(type.value)}
-              onChange={() => handleFilterChange(type.value, selectedTypes, setSelectedTypes)}
-              style={styles.checkbox}
-            />
-            <span>{type.label}</span>
-          </label>
-        ))}
+        <h3 style={styles.filterGroupTitle}>Work Type</h3>
+        <label style={styles.checkboxLabel}>
+          <input
+            type="checkbox"
+            checked={isRemoteOnly}
+            onChange={() => {
+              setIsRemoteOnly(!isRemoteOnly);
+              setCurrentPage(1);
+            }}
+            style={styles.checkbox}
+          />
+          <span>Remote only</span>
+        </label>
       </div>
     </>
   );
