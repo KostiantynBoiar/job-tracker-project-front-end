@@ -61,9 +61,9 @@ const getStatusColor = (status: string) => {
     case 'active':
       return { bg: 'rgba(59, 130, 246, 0.15)', color: '#3b82f6' };
     case 'expired':
-      return { bg: 'rgba(102, 102, 102, 0.15)', color: '#888' };
+      return { bg: 'rgba(128, 128, 128, 0.2)', color: 'var(--text-secondary)' }; // 🕵️ Adapted for light/dark mode
     default:
-      return { bg: 'rgba(102, 102, 102, 0.15)', color: '#888' };
+      return { bg: 'rgba(128, 128, 128, 0.2)', color: 'var(--text-secondary)' };
   }
 };
 
@@ -172,7 +172,7 @@ function SavedJobCard({ savedJob, isRemoving, onRemove, onNotesUpdate }: SavedJo
           </div>
         )}
         <div style={styles.cardInfo}>
-          <h3 style={styles.cardTitle}>{job.title}</h3>
+          <h3 style={styles.cardTitle} title={job.title}>{job.title}</h3>
           <p style={styles.cardCompany}>{job.company.name}</p>
         </div>
         <button
@@ -369,7 +369,7 @@ export default function SavedJobsPage() {
         {/* Header */}
         <header style={styles.pageHeader}>
           <div style={styles.headerContent}>
-            <Bookmark size={32} style={{ color: '#3b82f6' }} />
+            <Bookmark size={32} style={{ color: '#3b82f6', flexShrink: 0 }} />
             <div>
               <h1 style={styles.pageTitle}>Saved Jobs</h1>
               <p style={styles.pageSubtitle}>
@@ -430,7 +430,7 @@ export default function SavedJobsPage() {
             ))
           ) : savedJobs.length === 0 ? (
             <div style={styles.emptyState}>
-              <Bookmark size={64} style={{ color: '#333', marginBottom: '16px' }} />
+              <Bookmark size={64} style={{ color: 'var(--text-secondary)', marginBottom: '16px' }} />
               <h2 style={styles.emptyTitle}>No saved jobs yet</h2>
               <p style={styles.emptyText}>
                 Jobs you save will appear here. Start exploring and save jobs you're interested in!
@@ -456,13 +456,17 @@ export default function SavedJobsPage() {
   );
 }
 
+// 🕵️ SENIOR DEV FIX: All hardcoded colors removed. 
+// Added box-sizing, min-width, and flex-wrap to prevent mobile screen clipping!
 const styles: { [key: string]: React.CSSProperties } = {
   pageContainer: {
     minHeight: '100vh',
-    backgroundColor: '#0a0a0a',
-    padding: '24px',
+    backgroundColor: 'var(--bg-primary)',
+    padding: 'clamp(16px, 5vw, 24px)', // Responsive padding for mobile
     maxWidth: '900px',
     margin: '0 auto',
+    width: '100%',
+    boxSizing: 'border-box',
   },
   loadingContainer: {
     display: 'flex',
@@ -470,11 +474,12 @@ const styles: { [key: string]: React.CSSProperties } = {
     alignItems: 'center',
     justifyContent: 'center',
     minHeight: '100vh',
-    backgroundColor: '#0a0a0a',
+    backgroundColor: 'var(--bg-primary)',
     gap: '16px',
+    width: '100%',
   },
   loadingText: {
-    color: '#888',
+    color: 'var(--text-secondary)',
     fontSize: '1rem',
   },
   errorContainer: {
@@ -483,17 +488,19 @@ const styles: { [key: string]: React.CSSProperties } = {
     alignItems: 'center',
     justifyContent: 'center',
     minHeight: '100vh',
-    backgroundColor: '#0a0a0a',
+    backgroundColor: 'var(--bg-primary)',
     padding: '24px',
     textAlign: 'center',
+    width: '100%',
+    boxSizing: 'border-box',
   },
   errorTitle: {
-    color: '#fff',
+    color: 'var(--text-primary)',
     fontSize: '1.5rem',
     marginBottom: '8px',
   },
   errorText: {
-    color: '#888',
+    color: 'var(--text-secondary)',
     fontSize: '1rem',
     marginBottom: '24px',
   },
@@ -518,12 +525,12 @@ const styles: { [key: string]: React.CSSProperties } = {
   pageTitle: {
     fontSize: '1.75rem',
     fontWeight: 700,
-    color: '#fff',
+    color: 'var(--text-primary)',
     margin: 0,
   },
   pageSubtitle: {
     fontSize: '0.95rem',
-    color: '#888',
+    color: 'var(--text-secondary)',
     margin: '4px 0 0 0',
   },
   filtersContainer: {
@@ -531,6 +538,7 @@ const styles: { [key: string]: React.CSSProperties } = {
     flexDirection: 'column',
     gap: '16px',
     marginBottom: '24px',
+    width: '100%',
   },
   statusTabs: {
     display: 'flex',
@@ -542,12 +550,12 @@ const styles: { [key: string]: React.CSSProperties } = {
     alignItems: 'center',
     gap: '8px',
     padding: '10px 16px',
-    backgroundColor: '#111',
+    backgroundColor: 'var(--bg-secondary)',
     borderWidth: '1px',
     borderStyle: 'solid',
-    borderColor: '#333',
+    borderColor: 'var(--border-color)',
     borderRadius: '8px',
-    color: '#888',
+    color: 'var(--text-secondary)',
     cursor: 'pointer',
     fontSize: '0.9rem',
     fontWeight: 500,
@@ -559,37 +567,40 @@ const styles: { [key: string]: React.CSSProperties } = {
     color: '#fff',
   },
   tabCount: {
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: 'rgba(128, 128, 128, 0.2)', // Adapts naturally
     padding: '2px 8px',
     borderRadius: '10px',
     fontSize: '0.8rem',
+    color: 'inherit',
   },
   searchWrapper: {
     position: 'relative',
     display: 'flex',
     alignItems: 'center',
+    width: '100%',
   },
   searchIcon: {
     position: 'absolute',
     left: '12px',
-    color: '#666',
+    color: 'var(--text-secondary)',
   },
   searchInput: {
     width: '100%',
     padding: '12px 40px',
     fontSize: '1rem',
-    border: '1px solid #333',
+    border: '1px solid var(--border-color)',
     borderRadius: '8px',
-    backgroundColor: '#111',
-    color: '#fff',
+    backgroundColor: 'var(--bg-secondary)',
+    color: 'var(--text-primary)',
     outline: 'none',
+    boxSizing: 'border-box',
   },
   clearSearchButton: {
     position: 'absolute',
     right: '12px',
     background: 'none',
     border: 'none',
-    color: '#666',
+    color: 'var(--text-secondary)',
     cursor: 'pointer',
     padding: '4px',
   },
@@ -597,24 +608,28 @@ const styles: { [key: string]: React.CSSProperties } = {
     display: 'flex',
     flexDirection: 'column',
     gap: '16px',
+    width: '100%',
   },
   card: {
-    backgroundColor: '#111',
-    border: '1px solid #333',
+    backgroundColor: 'var(--bg-secondary)',
+    border: '1px solid var(--border-color)',
     borderRadius: '12px',
-    padding: '20px',
+    padding: 'clamp(16px, 4vw, 20px)', // Adapts nicely to mobile screens
+    width: '100%',
+    boxSizing: 'border-box',
   },
   cardHeader: {
     display: 'flex',
     alignItems: 'flex-start',
     gap: '16px',
     marginBottom: '12px',
+    width: '100%',
   },
   companyLogo: {
     width: '48px',
     height: '48px',
-    backgroundColor: '#222',
-    border: '1px solid #333',
+    backgroundColor: 'var(--bg-primary)',
+    border: '1px solid var(--border-color)',
     borderRadius: '8px',
     display: 'flex',
     alignItems: 'center',
@@ -629,12 +644,16 @@ const styles: { [key: string]: React.CSSProperties } = {
   },
   cardInfo: {
     flex: 1,
+    minWidth: 0, // This stops long job titles from breaking the flex container!
   },
   cardTitle: {
     fontSize: '1.1rem',
     fontWeight: 600,
-    color: '#fff',
+    color: 'var(--text-primary)',
     margin: 0,
+    whiteSpace: 'nowrap',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis', // Ensures title doesn't spill over on mobile
   },
   cardCompany: {
     fontSize: '0.95rem',
@@ -646,14 +665,15 @@ const styles: { [key: string]: React.CSSProperties } = {
     background: 'none',
     borderWidth: '1px',
     borderStyle: 'solid',
-    borderColor: '#333',
+    borderColor: 'var(--border-color)',
     borderRadius: '8px',
-    color: '#888',
+    color: 'var(--text-secondary)',
     cursor: 'pointer',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
     transition: 'all 0.2s',
+    flexShrink: 0,
   },
   statusRow: {
     display: 'flex',
@@ -674,7 +694,7 @@ const styles: { [key: string]: React.CSSProperties } = {
     alignItems: 'center',
     gap: '6px',
     fontSize: '0.85rem',
-    color: '#666',
+    color: 'var(--text-secondary)',
   },
   cardMeta: {
     display: 'flex',
@@ -687,14 +707,16 @@ const styles: { [key: string]: React.CSSProperties } = {
     alignItems: 'center',
     gap: '6px',
     fontSize: '0.85rem',
-    color: '#888',
+    color: 'var(--text-secondary)',
   },
   notesSection: {
-    backgroundColor: '#0a0a0a',
-    border: '1px solid #222',
+    backgroundColor: 'var(--bg-primary)',
+    border: '1px solid var(--border-color)',
     borderRadius: '8px',
     padding: '12px',
     marginBottom: '16px',
+    width: '100%',
+    boxSizing: 'border-box',
   },
   notesHeader: {
     display: 'flex',
@@ -707,7 +729,7 @@ const styles: { [key: string]: React.CSSProperties } = {
     alignItems: 'center',
     gap: '6px',
     fontSize: '0.85rem',
-    color: '#888',
+    color: 'var(--text-secondary)',
     fontWeight: 500,
   },
   editNotesButton: {
@@ -724,10 +746,11 @@ const styles: { [key: string]: React.CSSProperties } = {
   },
   notesText: {
     fontSize: '0.9rem',
-    color: '#aaa',
+    color: 'var(--text-secondary)',
     margin: 0,
     lineHeight: 1.5,
     fontStyle: 'italic',
+    wordBreak: 'break-word', // Keeps long strings inside the box
   },
   notesEditContainer: {
     display: 'flex',
@@ -737,14 +760,15 @@ const styles: { [key: string]: React.CSSProperties } = {
   notesTextarea: {
     width: '100%',
     padding: '10px',
-    backgroundColor: '#111',
-    border: '1px solid #333',
+    backgroundColor: 'var(--bg-secondary)',
+    border: '1px solid var(--border-color)',
     borderRadius: '6px',
-    color: '#fff',
+    color: 'var(--text-primary)',
     fontSize: '0.9rem',
     resize: 'vertical',
     outline: 'none',
     fontFamily: 'inherit',
+    boxSizing: 'border-box',
   },
   notesActions: {
     display: 'flex',
@@ -754,9 +778,9 @@ const styles: { [key: string]: React.CSSProperties } = {
   notesCancelButton: {
     padding: '6px 12px',
     background: 'none',
-    border: '1px solid #333',
+    border: '1px solid var(--border-color)',
     borderRadius: '6px',
-    color: '#888',
+    color: 'var(--text-secondary)',
     cursor: 'pointer',
     fontSize: '0.85rem',
   },
@@ -776,20 +800,23 @@ const styles: { [key: string]: React.CSSProperties } = {
   cardActions: {
     display: 'flex',
     gap: '12px',
+    flexWrap: 'wrap', // Stops buttons from breaking the layout on small phones
   },
   detailsButton: {
     flex: 1,
+    minWidth: '120px',
     padding: '10px 16px',
     backgroundColor: 'transparent',
-    border: '1px solid #333',
+    border: '1px solid var(--border-color)',
     borderRadius: '8px',
-    color: '#fff',
+    color: 'var(--text-primary)',
     cursor: 'pointer',
     fontSize: '0.9rem',
     fontWeight: 500,
   },
   applyButton: {
     flex: 1,
+    minWidth: '120px',
     padding: '10px 16px',
     display: 'flex',
     alignItems: 'center',
@@ -807,18 +834,18 @@ const styles: { [key: string]: React.CSSProperties } = {
     flexDirection: 'column',
     alignItems: 'center',
     justifyContent: 'center',
-    padding: '80px 24px',
+    padding: 'clamp(40px, 10vw, 80px) 24px',
     textAlign: 'center',
   },
   emptyTitle: {
     fontSize: '1.5rem',
     fontWeight: 600,
-    color: '#fff',
+    color: 'var(--text-primary)',
     margin: '0 0 8px 0',
   },
   emptyText: {
     fontSize: '1rem',
-    color: '#888',
+    color: 'var(--text-secondary)',
     marginBottom: '24px',
     maxWidth: '400px',
   },
@@ -835,7 +862,7 @@ const styles: { [key: string]: React.CSSProperties } = {
   noResults: {
     textAlign: 'center',
     padding: '48px 24px',
-    color: '#888',
+    color: 'var(--text-secondary)',
   },
   clearFiltersButton: {
     marginTop: '16px',

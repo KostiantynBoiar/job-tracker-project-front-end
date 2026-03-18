@@ -217,7 +217,7 @@ export default function WatchlistPage() {
           {watchlists.map((wl) => {
             const currentlyActive = isActive(wl);
             return (
-              <div key={wl.id} style={{...styles.savedCard, borderColor: currentlyActive ? '#22c55e' : '#27272a'}}>
+              <div key={wl.id} style={{...styles.savedCard, borderColor: currentlyActive ? '#22c55e' : 'var(--border-color)'}}>
                 <div style={styles.savedHeader}>
                   <h3 style={styles.savedTitle}>{wl.name}</h3>
                   <button onClick={() => handleDelete(wl.id)} style={styles.deleteIcon} title="Delete">
@@ -261,7 +261,7 @@ export default function WatchlistPage() {
 
       {!isCreating && watchlists.length === 0 && (
         <div style={styles.emptyState}>
-          <Bookmark size={48} style={{ color: '#3f3f46', marginBottom: '16px' }} />
+          <Bookmark size={48} style={{ color: 'var(--text-secondary)', marginBottom: '16px' }} />
           <h3>No watchlists yet</h3>
           <p>Create your first watchlist to filter the Daily Feed.</p>
         </div>
@@ -286,7 +286,7 @@ export default function WatchlistPage() {
 
           <div style={styles.card}>
             <div style={styles.cardHeader}>
-              <Building size={20} style={{ color: '#a1a1aa' }} />
+              <Building size={20} style={{ color: 'var(--text-secondary)' }} />
               <h2 style={styles.cardTitle}>Target Companies</h2>
             </div>
             <p style={styles.cardDesc}>Select the companies to monitor. Leave empty to track all.</p>
@@ -300,9 +300,9 @@ export default function WatchlistPage() {
                     onClick={() => toggleCompany(company.id)}
                     style={{
                       ...styles.chip,
-                      backgroundColor: isSelected ? 'rgba(59, 130, 246, 0.15)' : 'transparent',
-                      color: isSelected ? '#3b82f6' : '#a1a1aa',
-                      borderColor: isSelected ? '#3b82f6' : '#3f3f46',
+                      backgroundColor: isSelected ? 'rgba(59, 130, 246, 0.15)' : 'var(--bg-primary)',
+                      color: isSelected ? '#3b82f6' : 'var(--text-secondary)',
+                      borderColor: isSelected ? '#3b82f6' : 'var(--border-color)',
                     }}
                   >
                     {company.name}
@@ -314,7 +314,7 @@ export default function WatchlistPage() {
 
           <div style={styles.card}>
             <div style={styles.cardHeader}>
-              <Briefcase size={20} style={{ color: '#a1a1aa' }} />
+              <Briefcase size={20} style={{ color: 'var(--text-secondary)' }} />
               <h2 style={styles.cardTitle}>Target Roles & Keywords</h2>
             </div>
             <p style={styles.cardDesc}>Enter keywords separated by commas (e.g., "Frontend, React, Python").</p>
@@ -330,7 +330,7 @@ export default function WatchlistPage() {
 
           <div style={styles.card}>
             <div style={styles.cardHeader}>
-              <Bell size={20} style={{ color: '#a1a1aa' }} />
+              <Bell size={20} style={{ color: 'var(--text-secondary)' }} />
               <h2 style={styles.cardTitle}>Email Notifications</h2>
             </div>
             <label style={styles.checkboxLabel}>
@@ -359,33 +359,34 @@ export default function WatchlistPage() {
   );
 }
 
+// 🕵️ SENIOR DEV FIX: Replaced all hardcoded hex values with CSS variables
 const styles: { [key: string]: React.CSSProperties } = {
-  container: { padding: '24px', maxWidth: '800px', width: '100%', boxSizing: 'border-box', color: '#f4f4f5', margin: '0 auto' },
+  container: { padding: 'clamp(16px, 4vw, 24px)', maxWidth: '800px', width: '100%', boxSizing: 'border-box', color: 'var(--text-primary)', margin: '0 auto' },
   header: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '32px' },
-  title: { fontSize: '1.875rem', fontWeight: 700, margin: '0 0 8px 0', color: '#ffffff' },
-  subtitle: { color: '#a1a1aa', fontSize: '1rem', margin: 0 },
+  title: { fontSize: '1.875rem', fontWeight: 700, margin: '0 0 8px 0', color: 'var(--text-primary)' },
+  subtitle: { color: 'var(--text-secondary)', fontSize: '1rem', margin: 0 },
   warningText: { color: '#ef4444', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 500, marginTop: '8px' },
   addButton: { display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 16px', backgroundColor: '#3b82f6', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 600, cursor: 'pointer' },
   alert: { padding: '16px', borderRadius: '8px', marginBottom: '24px', fontWeight: 500 },
   grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '20px' },
-  savedCard: { backgroundColor: '#18181b', border: '1px solid #27272a', borderRadius: '12px', padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px', transition: 'border-color 0.2s' },
+  savedCard: { backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '12px', padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px', transition: 'border-color 0.2s' },
   savedHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
-  savedTitle: { margin: 0, fontSize: '1.2rem', color: '#fff', fontWeight: 600 },
+  savedTitle: { margin: 0, fontSize: '1.2rem', color: 'var(--text-primary)', fontWeight: 600 },
   deleteIcon: { background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '4px' },
-  savedDetail: { display: 'flex', alignItems: 'center', gap: '12px', color: '#a1a1aa', fontSize: '0.95rem' },
+  savedDetail: { display: 'flex', alignItems: 'center', gap: '12px', color: 'var(--text-secondary)', fontSize: '0.95rem' },
   activateButton: { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '12px', border: 'none', borderRadius: '8px', fontWeight: 600, fontSize: '0.95rem', cursor: 'pointer', marginTop: 'auto', transition: 'all 0.2s' },
-  emptyState: { textAlign: 'center', padding: '60px 20px', backgroundColor: '#18181b', borderRadius: '12px', border: '1px solid #27272a', color: '#a1a1aa' },
+  emptyState: { textAlign: 'center', padding: '60px 20px', backgroundColor: 'var(--bg-secondary)', borderRadius: '12px', border: '1px solid var(--border-color)', color: 'var(--text-secondary)' },
   formContainer: { display: 'flex', flexDirection: 'column', gap: '24px' },
-  card: { backgroundColor: '#18181b', border: '1px solid #27272a', borderRadius: '12px', padding: '24px' },
+  card: { backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '12px', padding: '24px' },
   cardHeader: { display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' },
-  cardTitle: { fontSize: '1.25rem', fontWeight: 600, margin: 0, color: '#e4e4e7' },
-  cardDesc: { color: '#a1a1aa', fontSize: '0.95rem', marginTop: 0, marginBottom: '20px' },
+  cardTitle: { fontSize: '1.25rem', fontWeight: 600, margin: 0, color: 'var(--text-primary)' },
+  cardDesc: { color: 'var(--text-secondary)', fontSize: '0.95rem', marginTop: 0, marginBottom: '20px' },
   chipGrid: { display: 'flex', flexWrap: 'wrap', gap: '12px' },
   chip: { padding: '8px 20px', borderRadius: '24px', border: '1px solid', cursor: 'pointer', fontWeight: 500, fontSize: '0.95rem', transition: 'all 0.2s ease' },
-  input: { width: '100%', padding: '14px 16px', backgroundColor: '#09090b', border: '1px solid #3f3f46', borderRadius: '8px', color: '#f4f4f5', fontSize: '1rem', boxSizing: 'border-box', outline: 'none' },
-  checkboxLabel: { display: 'flex', alignItems: 'center', gap: '12px', color: '#e4e4e7', cursor: 'pointer', fontSize: '1rem', userSelect: 'none' },
+  input: { width: '100%', padding: '14px 16px', backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border-color)', borderRadius: '8px', color: 'var(--text-primary)', fontSize: '1rem', boxSizing: 'border-box', outline: 'none' },
+  checkboxLabel: { display: 'flex', alignItems: 'center', gap: '12px', color: 'var(--text-primary)', cursor: 'pointer', fontSize: '1rem', userSelect: 'none' },
   checkbox: { width: '18px', height: '18px', cursor: 'pointer', accentColor: '#3b82f6' },
   footer: { display: 'flex', justifyContent: 'flex-end', gap: '16px', marginTop: '8px' },
-  cancelButton: { padding: '14px 24px', backgroundColor: 'transparent', color: '#a1a1aa', border: '1px solid #3f3f46', borderRadius: '8px', fontWeight: 600, cursor: 'pointer' },
+  cancelButton: { padding: '14px 24px', backgroundColor: 'transparent', color: 'var(--text-secondary)', border: '1px solid var(--border-color)', borderRadius: '8px', fontWeight: 600, cursor: 'pointer' },
   saveButton: { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '14px 32px', backgroundColor: '#3b82f6', color: '#ffffff', border: 'none', borderRadius: '8px', fontWeight: 600, fontSize: '1rem', cursor: 'pointer' }
 };
