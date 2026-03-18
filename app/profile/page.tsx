@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { User, Mail, Calendar, Loader2, Save, Lock } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { User, Mail, Calendar, Loader2, Save, Lock, Settings, Briefcase } from 'lucide-react';
 import { apiClient } from '../../src/api/client';
 import ProtectedRoute from '../../src/components/auth/ProtectedRoute/ProtectedRoute';
 
@@ -16,6 +17,7 @@ interface UserProfile {
 }
 
 export default function ProfilePage() {
+  const router = useRouter();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -145,10 +147,22 @@ export default function ProfilePage() {
     <ProtectedRoute>
       <div style={styles.container}>
         <header style={styles.header}>
-          <User size={32} style={{ color: '#3b82f6' }} />
-          <div>
-            <h1 style={styles.title}>My Profile</h1>
-            <p style={styles.subtitle}>Manage your account settings</p>
+          <div style={styles.headerLeft}>
+            <User size={32} style={{ color: '#3b82f6' }} />
+            <div>
+              <h1 style={styles.title}>My Profile</h1>
+              <p style={styles.subtitle}>Manage your account settings</p>
+            </div>
+          </div>
+          <div style={styles.headerRight}>
+            <button onClick={() => router.push('/preferences')} style={styles.navButton}>
+              <Settings size={18} />
+              Preferences
+            </button>
+            <button onClick={() => router.push('/jobs')} style={styles.navButton}>
+              <Briefcase size={18} />
+              Browse Jobs
+            </button>
           </div>
         </header>
 
@@ -376,8 +390,33 @@ const styles: { [key: string]: React.CSSProperties } = {
   header: {
     display: 'flex',
     alignItems: 'center',
-    gap: '16px',
+    justifyContent: 'space-between',
     marginBottom: '24px',
+    flexWrap: 'wrap',
+    gap: '16px',
+  },
+  headerLeft: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '16px',
+  },
+  headerRight: {
+    display: 'flex',
+    gap: '12px',
+  },
+  navButton: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    padding: '10px 16px',
+    backgroundColor: '#111',
+    color: '#fff',
+    border: '1px solid #333',
+    borderRadius: '8px',
+    cursor: 'pointer',
+    fontWeight: 500,
+    fontSize: '0.95rem',
+    transition: 'all 0.2s',
   },
   title: {
     fontSize: '1.75rem',
