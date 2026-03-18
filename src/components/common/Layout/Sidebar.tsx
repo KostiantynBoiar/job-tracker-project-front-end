@@ -11,7 +11,7 @@ export default function Sidebar() {
   const router = useRouter();
   const { user, logout } = useContext(AuthContext);
   
-  // 🕵️ Theme State Management
+  // Theme State Management
   const [isDark, setIsDark] = useState(true);
 
   // When the component mounts, check the current theme
@@ -24,7 +24,7 @@ export default function Sidebar() {
     setIsDark(!isLightMode);
   }, []);
 
-  // 🕵️ Toggle Theme Function
+  // Toggle Theme Function
   const toggleTheme = () => {
     const newIsDark = !isDark;
     setIsDark(newIsDark);
@@ -77,7 +77,7 @@ export default function Sidebar() {
         <Link href="/jobs" style={getLinkStyle(pathname === '/jobs')}>
           <LayoutGrid size={20} /> Daily Feed
         </Link>
-        <Link href="/preferences" style={getLinkStyle(pathname === '/watchlist')}>
+        <Link href="/preferences" style={getLinkStyle(pathname === '/preferences')}>
           <Settings size={20} /> My Watchlist
         </Link>
         <Link href="/saved" style={getLinkStyle(pathname === '/saved')}>
@@ -88,7 +88,7 @@ export default function Sidebar() {
       {/* Bottom Section (Theme Toggle & User Profile) */}
       <div style={styles.bottomSection}>
         
-        {/* 🌗 Theme Toggle Switch */}
+        {/* Theme Toggle Switch */}
         <div style={styles.themeToggleContainer} onClick={toggleTheme}>
           <div style={styles.themeToggleBg}>
             <div style={{
@@ -108,14 +108,15 @@ export default function Sidebar() {
 
         {/* User Profile & Sign Out */}
         <div style={styles.userSection}>
-          <div style={styles.userInfo}>
+          {/* Wrapped the entire avatar and email in a clean Link to /profile */}
+          <Link href="/profile" style={styles.userInfoLink}>
             <div style={styles.avatar}>
               {user?.email?.charAt(0).toUpperCase() || 'U'}
             </div>
             <div style={styles.userEmail} title={user?.email || 'User'}>
               {user?.email?.split('@')[0] || 'User'}
             </div>
-          </div>
+          </Link>
           
           <button onClick={handleSignOut} style={styles.signOutBtn} title="Sign Out">
             <LogOut size={18} />
@@ -126,10 +127,10 @@ export default function Sidebar() {
   );
 }
 
-// 🕵️ SENIOR DEV FIX: Fully dynamic CSS variables for seamless transitions!
+// Fully dynamic CSS variables for seamless transitions!
 const styles: { [key: string]: React.CSSProperties } = {
   sidebar: { 
-    width: '100%', // Takes up the 250px allocated by the LayoutWrapper
+    width: '100%', 
     height: '100%',
     display: 'flex', 
     flexDirection: 'column',
@@ -165,7 +166,7 @@ const styles: { [key: string]: React.CSSProperties } = {
     gap: '16px',
     flexShrink: 0
   },
-  // 🌗 Theme Toggle Styles
+  // Theme Toggle Styles
   themeToggleContainer: {
     cursor: 'pointer',
     width: '100%',
@@ -217,11 +218,13 @@ const styles: { [key: string]: React.CSSProperties } = {
     borderRadius: '12px',
     border: '1px solid var(--border-color)'
   },
-  userInfo: {
+  userInfoLink: {
     display: 'flex',
     alignItems: 'center',
     gap: '10px',
-    overflow: 'hidden'
+    overflow: 'hidden',
+    textDecoration: 'none', // Prevents underline on the email text
+    cursor: 'pointer',
   },
   avatar: { 
     width: '32px', 

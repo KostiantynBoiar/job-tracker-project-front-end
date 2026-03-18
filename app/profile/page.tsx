@@ -182,7 +182,7 @@ export default function ProfilePage() {
         {/* Account Info Card */}
         <div style={styles.card}>
           <div style={styles.cardHeader}>
-            <Mail size={20} style={{ color: '#a1a1aa' }} />
+            <Mail size={20} style={{ color: 'var(--text-secondary)' }} />
             <h2 style={styles.cardTitle}>Account Information</h2>
           </div>
           <div style={styles.infoRow}>
@@ -207,7 +207,7 @@ export default function ProfilePage() {
         {/* Edit Profile Card */}
         <form onSubmit={handleSaveProfile} style={styles.card}>
           <div style={styles.cardHeader}>
-            <User size={20} style={{ color: '#a1a1aa' }} />
+            <User size={20} style={{ color: 'var(--text-secondary)' }} />
             <h2 style={styles.cardTitle}>Edit Profile</h2>
           </div>
 
@@ -259,7 +259,7 @@ export default function ProfilePage() {
         {profile?.auth_provider === 'email' && (
           <div style={styles.card}>
             <div style={styles.cardHeader}>
-              <Lock size={20} style={{ color: '#a1a1aa' }} />
+              <Lock size={20} style={{ color: 'var(--text-secondary)' }} />
               <h2 style={styles.cardTitle}>Change Password</h2>
             </div>
 
@@ -336,13 +336,17 @@ export default function ProfilePage() {
   );
 }
 
+// Fully dynamic CSS variables for perfect light/dark mode syncing!
 const styles: { [key: string]: React.CSSProperties } = {
   container: {
     minHeight: '100vh',
-    backgroundColor: '#0a0a0a',
-    padding: '24px',
+    backgroundColor: 'var(--bg-primary)',
+    padding: 'clamp(16px, 4vw, 24px)', // Responsive padding
     maxWidth: '700px',
     margin: '0 auto',
+    width: '100%',
+    boxSizing: 'border-box',
+    color: 'var(--text-primary)',
   },
   loadingContainer: {
     display: 'flex',
@@ -350,11 +354,12 @@ const styles: { [key: string]: React.CSSProperties } = {
     alignItems: 'center',
     justifyContent: 'center',
     minHeight: '100vh',
-    backgroundColor: '#0a0a0a',
+    backgroundColor: 'var(--bg-primary)',
     gap: '16px',
+    width: '100%',
   },
   loadingText: {
-    color: '#888',
+    color: 'var(--text-secondary)',
     fontSize: '1rem',
   },
   errorContainer: {
@@ -363,17 +368,19 @@ const styles: { [key: string]: React.CSSProperties } = {
     alignItems: 'center',
     justifyContent: 'center',
     minHeight: '100vh',
-    backgroundColor: '#0a0a0a',
+    backgroundColor: 'var(--bg-primary)',
     padding: '24px',
     textAlign: 'center',
+    width: '100%',
+    boxSizing: 'border-box',
   },
   errorTitle: {
-    color: '#fff',
+    color: 'var(--text-primary)',
     fontSize: '1.5rem',
     marginBottom: '8px',
   },
   errorText: {
-    color: '#888',
+    color: 'var(--text-secondary)',
     fontSize: '1rem',
     marginBottom: '24px',
   },
@@ -403,15 +410,16 @@ const styles: { [key: string]: React.CSSProperties } = {
   headerRight: {
     display: 'flex',
     gap: '12px',
+    flexWrap: 'wrap', // Prevents buttons from squishing out of bounds
   },
   navButton: {
     display: 'flex',
     alignItems: 'center',
     gap: '8px',
     padding: '10px 16px',
-    backgroundColor: '#111',
-    color: '#fff',
-    border: '1px solid #333',
+    backgroundColor: 'var(--bg-secondary)',
+    color: 'var(--text-primary)',
+    border: '1px solid var(--border-color)',
     borderRadius: '8px',
     cursor: 'pointer',
     fontWeight: 500,
@@ -421,12 +429,12 @@ const styles: { [key: string]: React.CSSProperties } = {
   title: {
     fontSize: '1.75rem',
     fontWeight: 700,
-    color: '#fff',
+    color: 'var(--text-primary)',
     margin: 0,
   },
   subtitle: {
     fontSize: '0.95rem',
-    color: '#888',
+    color: 'var(--text-secondary)',
     margin: '4px 0 0 0',
   },
   alert: {
@@ -436,10 +444,10 @@ const styles: { [key: string]: React.CSSProperties } = {
     fontWeight: 500,
   },
   card: {
-    backgroundColor: '#111',
-    border: '1px solid #333',
+    backgroundColor: 'var(--bg-secondary)',
+    border: '1px solid var(--border-color)',
     borderRadius: '12px',
-    padding: '24px',
+    padding: 'clamp(16px, 4vw, 24px)', // Fluid padding for mobile
     marginBottom: '20px',
   },
   cardHeader: {
@@ -452,21 +460,21 @@ const styles: { [key: string]: React.CSSProperties } = {
     fontSize: '1.25rem',
     fontWeight: 600,
     margin: 0,
-    color: '#fff',
+    color: 'var(--text-primary)',
   },
   infoRow: {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: '12px 0',
-    borderBottom: '1px solid #222',
+    borderBottom: '1px solid var(--border-color)',
   },
   infoLabel: {
-    color: '#888',
+    color: 'var(--text-secondary)',
     fontSize: '0.95rem',
   },
   infoValue: {
-    color: '#fff',
+    color: 'var(--text-primary)',
     fontSize: '0.95rem',
     display: 'flex',
     alignItems: 'center',
@@ -483,24 +491,26 @@ const styles: { [key: string]: React.CSSProperties } = {
   formGroup: {
     marginBottom: '16px',
     flex: 1,
+    minWidth: '200px', // Stops inputs from getting too narrow before wrapping
   },
   formRow: {
     display: 'flex',
     gap: '16px',
+    flexWrap: 'wrap', // Wraps first and last name neatly on small screens
   },
   label: {
     display: 'block',
-    color: '#888',
+    color: 'var(--text-secondary)',
     fontSize: '0.9rem',
     marginBottom: '8px',
   },
   input: {
     width: '100%',
     padding: '12px 16px',
-    backgroundColor: '#0a0a0a',
-    border: '1px solid #333',
+    backgroundColor: 'var(--bg-primary)',
+    border: '1px solid var(--border-color)',
     borderRadius: '8px',
-    color: '#fff',
+    color: 'var(--text-primary)',
     fontSize: '1rem',
     outline: 'none',
     boxSizing: 'border-box',
@@ -535,16 +545,18 @@ const styles: { [key: string]: React.CSSProperties } = {
     display: 'flex',
     gap: '12px',
     marginTop: '16px',
+    flexWrap: 'wrap', // Wraps buttons on tiny screens
   },
   cancelButton: {
     flex: 1,
     padding: '12px 24px',
     backgroundColor: 'transparent',
-    color: '#888',
-    border: '1px solid #333',
+    color: 'var(--text-secondary)',
+    border: '1px solid var(--border-color)',
     borderRadius: '8px',
     cursor: 'pointer',
     fontWeight: 600,
     fontSize: '1rem',
+    minWidth: '120px',
   },
 };
