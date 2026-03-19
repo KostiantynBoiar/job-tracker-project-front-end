@@ -11,6 +11,17 @@ const PAGE_SIZE_OPTIONS = [10, 20, 50, 100];
 export default function JobsPage() {
   const router = useRouter();
   
+  // Responsive state to handle mobile stacking
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 1024);
+    handleResize(); // Check on mount
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  // Data state
   const [jobs, setJobs] = useState<Job[]>([]);
   const [totalCount, setTotalCount] = useState(0);
   const [savedJobs, setSavedJobs] = useState<SavedJob[]>([]);
@@ -157,7 +168,7 @@ export default function JobsPage() {
 
   const getPageNumbers = () => {
     const pages: (number | string)[] = [];
-    const maxVisiblePages = 5;
+    const maxVisiblePages = isMobile ? 3 : 5; // Simpler pagination on mobile
     
     if (totalPages <= maxVisiblePages) {
       for (let i = 1; i <= totalPages; i++) {
@@ -165,13 +176,13 @@ export default function JobsPage() {
       }
     } else {
       if (currentPage <= 3) {
-        for (let i = 1; i <= 4; i++) pages.push(i);
+        for (let i = 1; i <= (isMobile ? 3 : 4); i++) pages.push(i);
         pages.push('...');
         pages.push(totalPages);
       } else if (currentPage >= totalPages - 2) {
         pages.push(1);
         pages.push('...');
-        for (let i = totalPages - 3; i <= totalPages; i++) pages.push(i);
+        for (let i = totalPages - (isMobile ? 2 : 3); i <= totalPages; i++) pages.push(i);
       } else {
         pages.push(1);
         pages.push('...');
@@ -294,9 +305,9 @@ export default function JobsPage() {
             aria-label={isSaved ? 'Remove from saved' : 'Save job'}
           >
             {isSaving ? (
-              <Loader2 size={20} style={{ animation: 'spin 1s linear infinite' }} />
+              <Loader2 size={18} style={{ animation: 'spin 1s linear infinite' }} />
             ) : (
-              <Bookmark size={20} fill={isSaved ? 'currentColor' : 'none'} />
+              <Bookmark size={18} fill={isSaved ? 'currentColor' : 'none'} />
             )}
           </button>
         </div>
@@ -366,15 +377,15 @@ export default function JobsPage() {
   return (
     <ProtectedRoute>
       <div style={styles.pageContainer}>
-        {/* Sidebar */}
-        <aside style={styles.sidebar}>
+        {/* Sidebar - Hides dynamically on mobile */}
+        <aside style={{...styles.sidebar, display: isMobile ? 'none' : 'block'}}>
           <FiltersContent />
         </aside>
 
         {/* Main Content */}
         <main style={styles.mainContent}>
-          {/* Search Bar */}
-          <div style={styles.searchRow}>
+          {/* Search Bar - Flex-direction changes based on mobile state */}
+          <div style={{...styles.searchRow, flexDirection: isMobile ? 'column' : 'row'}}>
             <div style={styles.searchInputWrapper}>
               <Search size={18} style={styles.searchIcon} />
               <input
@@ -394,35 +405,37 @@ export default function JobsPage() {
               )}
             </div>
 
-            <select
-              value={sortBy}
-              onChange={(e) => {
-                setSortBy(e.target.value as 'date' | 'salary' | 'company');
-                setCurrentPage(1);
-              }}
-              style={styles.sortSelect}
-            >
-              <option value="date">Latest</option>
-              <option value="salary">Salary</option>
-              <option value="company">Company</option>
-            </select>
+            <div style={{ display: 'flex', gap: '8px', width: isMobile ? '100%' : 'auto' }}>
+              <select
+                value={sortBy}
+                onChange={(e) => {
+                  setSortBy(e.target.value as 'date' | 'salary' | 'company');
+                  setCurrentPage(1);
+                }}
+                style={{...styles.sortSelect, flex: 1}}
+              >
+                <option value="date">Latest</option>
+                <option value="salary">Salary</option>
+                <option value="company">Company</option>
+              </select>
 
-            <select
-              value={pageSize}
-              onChange={(e) => handlePageSizeChange(Number(e.target.value))}
-              style={styles.sortSelect}
-            >
-              {PAGE_SIZE_OPTIONS.map(size => (
-                <option key={size} value={size}>{size} per page</option>
-              ))}
-            </select>
+              <select
+                value={pageSize}
+                onChange={(e) => handlePageSizeChange(Number(e.target.value))}
+                style={{...styles.sortSelect, flex: 1}}
+              >
+                {PAGE_SIZE_OPTIONS.map(size => (
+                  <option key={size} value={size}>{size} per page</option>
+                ))}
+              </select>
 
-            <button
-              onClick={() => setShowMobileFilters(true)}
-              style={styles.mobileFilterButton}
-            >
-              <Filter size={18} />
-            </button>
+              <button
+                onClick={() => setShowMobileFilters(true)}
+                style={{...styles.mobileFilterButton, display: isMobile ? 'block' : 'none'}}
+              >
+                <Filter size={18} />
+              </button>
+            </div>
           </div>
 
           {/* Results Count */}
@@ -443,7 +456,8 @@ export default function JobsPage() {
               jobs.map((job) => <JobCard key={job.id} job={job} />)
             ) : (
               <div style={styles.noResults}>
-                <p>No jobs found matching your criteria.</p>
+                <Bookmark size={48} style={{ color: 'var(--text-secondary)', marginBottom: '16px' }} />
+                <h3>No jobs found matching your criteria.</h3>
                 {hasActiveFilters && (
                   <button onClick={clearFilters} style={styles.clearFiltersButton}>
                     Clear filters
@@ -500,7 +514,7 @@ export default function JobsPage() {
           )}
         </main>
 
-        {/* Mobile Filters */}
+        {/* Mobile Filters Modal */}
         {showMobileFilters && (
           <div style={styles.mobileFiltersOverlay}>
             <div style={styles.mobileFiltersModal}>
@@ -525,11 +539,14 @@ export default function JobsPage() {
   );
 }
 
+// Box-sizing, width: 100%, and min-width: 0 added to prevent mobile layout breakages.
 const styles: { [key: string]: React.CSSProperties } = {
   pageContainer: {
     display: 'flex',
     minHeight: '100vh',
     backgroundColor: 'var(--bg-primary)',
+    width: '100%',
+    boxSizing: 'border-box',
   },
   loadingContainer: {
     display: 'flex',
@@ -539,6 +556,7 @@ const styles: { [key: string]: React.CSSProperties } = {
     minHeight: '100vh',
     backgroundColor: 'var(--bg-primary)',
     gap: '16px',
+    width: '100%',
   },
   loadingText: {
     color: 'var(--text-secondary)',
@@ -553,6 +571,8 @@ const styles: { [key: string]: React.CSSProperties } = {
     backgroundColor: 'var(--bg-primary)',
     padding: '24px',
     textAlign: 'center',
+    width: '100%',
+    boxSizing: 'border-box',
   },
   errorTitle: {
     color: 'var(--text-primary)',
@@ -579,6 +599,7 @@ const styles: { [key: string]: React.CSSProperties } = {
     padding: '24px',
     borderRight: '1px solid var(--border-color)',
     backgroundColor: 'var(--bg-secondary)',
+    flexShrink: 0, // Stops it from compressing
   },
   filterHeader: {
     display: 'flex',
@@ -629,22 +650,39 @@ const styles: { [key: string]: React.CSSProperties } = {
     fontSize: '0.85rem',
     fontStyle: 'italic',
   },
+  chipContainer: {
+    display: 'flex',
+    flexWrap: 'wrap',
+    gap: '8px',
+  },
+  chipLabel: {
+    padding: '6px 12px',
+    borderRadius: '20px',
+    border: '1px solid var(--border-color)',
+    backgroundColor: 'var(--bg-primary)',
+    marginBottom: 0,
+  },
   mainContent: {
     flex: 1,
-    padding: '24px',
+    padding: 'clamp(16px, 4vw, 24px)', // Auto-adjusts padding for mobile
     maxWidth: '900px',
+    width: '100%',
+    boxSizing: 'border-box',
+    minWidth: 0, // Critical for preventing layout blow-outs
   },
   searchRow: {
     display: 'flex',
     gap: '12px',
     marginBottom: '16px',
     alignItems: 'center',
+    width: '100%',
   },
   searchInputWrapper: {
     flex: 1,
     position: 'relative',
     display: 'flex',
     alignItems: 'center',
+    width: '100%',
   },
   searchIcon: {
     position: 'absolute',
@@ -660,6 +698,7 @@ const styles: { [key: string]: React.CSSProperties } = {
     backgroundColor: 'var(--bg-secondary)',
     color: 'var(--text-primary)',
     outline: 'none',
+    boxSizing: 'border-box',
   },
   clearSearchButton: {
     position: 'absolute',
@@ -680,7 +719,6 @@ const styles: { [key: string]: React.CSSProperties } = {
     fontSize: '0.9rem',
   },
   mobileFilterButton: {
-    display: 'none',
     padding: '12px',
     border: '1px solid var(--border-color)',
     borderRadius: '8px',
@@ -697,11 +735,15 @@ const styles: { [key: string]: React.CSSProperties } = {
     display: 'flex',
     flexDirection: 'column',
     gap: '16px',
+    width: '100%',
   },
   noResults: {
     textAlign: 'center',
     padding: '48px 24px',
     color: 'var(--text-secondary)',
+    backgroundColor: 'var(--bg-secondary)',
+    borderRadius: '12px',
+    border: '1px solid var(--border-color)',
   },
   clearFiltersButton: {
     marginTop: '16px',
@@ -717,13 +759,16 @@ const styles: { [key: string]: React.CSSProperties } = {
     backgroundColor: 'var(--bg-secondary)',
     border: '1px solid var(--border-color)',
     borderRadius: '12px',
-    padding: '20px',
+    padding: 'clamp(16px, 4vw, 20px)',
+    width: '100%',
+    boxSizing: 'border-box',
   },
   cardHeader: {
     display: 'flex',
     alignItems: 'flex-start',
     gap: '16px',
     marginBottom: '16px',
+    width: '100%',
   },
   companyLogo: {
     width: '48px',
@@ -747,12 +792,14 @@ const styles: { [key: string]: React.CSSProperties } = {
   },
   cardInfo: {
     flex: 1,
+    minWidth: 0, // This stops long job titles from breaking the flex container!
   },
   cardTitle: {
     fontSize: '1.1rem',
     fontWeight: 600,
     color: 'var(--text-primary)',
     margin: 0,
+    wordBreak: 'break-word', // Keeps long titles safely inside the box
   },
   cardCompany: {
     fontSize: '0.95rem',
@@ -769,6 +816,7 @@ const styles: { [key: string]: React.CSSProperties } = {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
+    flexShrink: 0,
   },
   saveButtonSaved: {
     backgroundColor: 'var(--accent-color)',
@@ -791,9 +839,11 @@ const styles: { [key: string]: React.CSSProperties } = {
   cardActions: {
     display: 'flex',
     gap: '12px',
+    flexWrap: 'wrap', // Stops buttons from blowing out the layout
   },
   detailsButton: {
     flex: 1,
+    minWidth: '120px',
     padding: '10px 16px',
     backgroundColor: 'transparent',
     border: '1px solid var(--border-color)',
@@ -805,6 +855,7 @@ const styles: { [key: string]: React.CSSProperties } = {
   },
   applyButton: {
     flex: 1,
+    minWidth: '120px',
     padding: '10px 16px',
     display: 'flex',
     alignItems: 'center',
@@ -824,6 +875,7 @@ const styles: { [key: string]: React.CSSProperties } = {
     gap: '8px',
     marginTop: '32px',
     paddingBottom: '24px',
+    flexWrap: 'wrap', // Allow pagination to wrap on very small phones
   },
   pageButton: {
     minWidth: '40px',
@@ -843,8 +895,8 @@ const styles: { [key: string]: React.CSSProperties } = {
     transition: 'all 0.2s',
   },
   pageButtonActive: {
-    backgroundColor: 'var(--accent-color)',
-    borderColor: 'var(--accent-color)',
+    backgroundColor: '#3b82f6',
+    borderColor: '#3b82f6',
     color: '#fff',
   },
   pageButtonDisabled: {
@@ -861,7 +913,7 @@ const styles: { [key: string]: React.CSSProperties } = {
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
     zIndex: 1000,
   },
   mobileFiltersModal: {
@@ -873,6 +925,7 @@ const styles: { [key: string]: React.CSSProperties } = {
     backgroundColor: 'var(--bg-secondary)',
     padding: '24px',
     overflowY: 'auto',
+    borderLeft: '1px solid var(--border-color)',
   },
   mobileFiltersHeader: {
     display: 'flex',
