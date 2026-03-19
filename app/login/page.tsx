@@ -1,30 +1,43 @@
-'use client';
+'use client'; // Required in Next.js to use React Hooks and interactive elements
 
 import React, { useState, useContext } from 'react';
 import { Mail, Lock, AlertCircle, Loader2, Github } from 'lucide-react';
 import Link from 'next/link';
+// Importing our custom AuthContext to manage global login state without prop-drilling
 import { AuthContext } from '../../src/contexts/AuthContext';
+// Custom API client abstracts away base URLs and default headers
 import { apiClient } from '../../src/api/client';
 import { getGoogleAuthUrl, getGitHubAuthUrl } from '../../src/api/oauth';
 
 export default function LoginPage() {
+  // Destructure the login function from our global AuthContext
   const { login } = useContext(AuthContext);
+  
+  // Local state management for form inputs (Controlled Components)
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  
+  // UI feedback state
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Handles standard Email/Password authentication
   const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
+    e.preventDefault(); // Prevent page reload to handle the request via AJAX
     setError('');
     setIsSubmitting(true);
 
     try {
+      // Send credentials to the Django REST backend
       const response = await apiClient.post('/api/users/login/', { email, password });
+      
+      // Extract the JWT access token and user metadata from the response
       const token = response.data.tokens?.access || response.data.access;
       const userData = response.data.user || { id: 'unknown', email: email };
 
       if (token) {
+        // Update the global context. This will automatically trigger a re-render
+        // and redirect the user to protected routes (like /jobs)
         login(token, {
           id: userData.id,
           email: userData.email,
@@ -34,21 +47,24 @@ export default function LoginPage() {
         setError('Login succeeded but no token was returned from the server.');
       }
     } catch (err: unknown) {
+      // Error handling: Catch specific HTTP status codes to provide helpful user feedback
       const error = err as { response?: { status?: number } };
       if (error.response?.status === 401 || error.response?.status === 400) {
-        setError('Invalid email or password. Please try again.');
+        setError('Invalid email or password. Please try again.'); // 401 Unauthorized / 400 Bad Request
       } else {
-        setError('Server error. Please try again later.');
+        setError('Server error. Please try again later.'); // 500 Internal Server Error fallback
       }
     } finally {
-      setIsSubmitting(false);
+      setIsSubmitting(false); // Remove loading spinner
     }
   };
 
+  // Initiates the Google OAuth 2.0 flow
   const handleGoogleLogin = async () => {
     setError('');
     setIsSubmitting(true);
     try {
+      // Fetch the Google authorization URL from our backend and redirect the user
       const authUrl = await getGoogleAuthUrl();
       window.location.href = authUrl;
     } catch {
@@ -57,10 +73,12 @@ export default function LoginPage() {
     }
   };
 
+  // Initiates the GitHub OAuth flow
   const handleGitHubLogin = async () => {
     setError('');
     setIsSubmitting(true);
     try {
+      // Fetch the GitHub authorization URL from our backend and redirect the user
       const authUrl = await getGitHubAuthUrl();
       window.location.href = authUrl;
     } catch {
@@ -75,6 +93,7 @@ export default function LoginPage() {
         <h1 style={styles.title}>Welcome Back</h1>
         <p style={styles.subtitle}>Sign in to your FAANG Tracker account</p>
 
+        {/* Conditional rendering for error alerts. role="alert" aids screen readers (WCAG Accessibility) */}
         {error && (
           <div style={styles.errorBox} role="alert">
             <AlertCircle size={18} style={{ minWidth: '18px' }} />
@@ -118,6 +137,7 @@ export default function LoginPage() {
           <span style={styles.dividerText}>or continue with</span>
         </div>
 
+        {/* Third-Party Authentication Buttons */}
         <div style={styles.socialGroup}>
           <button
             type="button"
@@ -125,6 +145,7 @@ export default function LoginPage() {
             style={styles.socialButton}
             disabled={isSubmitting}
           >
+            {/* Embedded SVG to save an external network request, improving sustainability score */}
             <svg viewBox="0 0 24 24" width="20" height="20" xmlns="http://www.w3.org/2000/svg">
               <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
               <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
@@ -153,6 +174,7 @@ export default function LoginPage() {
   );
 }
 
+// Styling utilizes CSS Variables (e.g., var(--bg-primary)) to seamlessly sync with the global theme engine
 const styles: { [key: string]: React.CSSProperties } = {
   container: {
     display: 'flex',

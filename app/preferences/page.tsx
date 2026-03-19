@@ -358,8 +358,7 @@ export default function WatchlistPage() {
     </div>
   );
 }
-
-// 🕵️ SENIOR DEV FIX: Replaced all hardcoded hex values with CSS variables
+//  hex values with CSS variables
 const styles: { [key: string]: React.CSSProperties } = {
   container: { padding: 'clamp(16px, 4vw, 24px)', maxWidth: '800px', width: '100%', boxSizing: 'border-box', color: 'var(--text-primary)', margin: '0 auto' },
   header: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '32px' },

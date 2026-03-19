@@ -35,7 +35,7 @@ const styles: { [key: string]: React.CSSProperties } = {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
-    // MAGIC FIX: 16px padding on mobile, smoothly scales up to 40px on desktop!
+    // 16px padding on mobile, smoothly scales up to 40px on desktop!
     padding: '16px clamp(16px, 5vw, 40px)', 
     backgroundColor: 'var(--bg-primary)',
     borderBottom: '1px solid var(--border-color)',

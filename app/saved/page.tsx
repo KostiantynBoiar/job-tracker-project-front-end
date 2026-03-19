@@ -456,7 +456,6 @@ export default function SavedJobsPage() {
   );
 }
 
-// 🕵️ SENIOR DEV FIX: All hardcoded colors removed. 
 // Added box-sizing, min-width, and flex-wrap to prevent mobile screen clipping!
 const styles: { [key: string]: React.CSSProperties } = {
   pageContainer: {

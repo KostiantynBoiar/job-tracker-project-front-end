@@ -3,28 +3,35 @@
 import React, { useState } from 'react';
 import { User, Mail, Lock, AlertCircle, Loader2, CheckCircle, Github } from 'lucide-react';
 import Link from 'next/link';
+// Importing our custom API client and OAuth helpers to maintain separation of concerns
 import { apiClient } from '../../src/api/client';
 import { getGoogleAuthUrl, getGitHubAuthUrl } from '../../src/api/oauth';
 
 export default function RegisterPage() {
+  // State management for form inputs (Controlled Component pattern)
   const [formData, setFormData] = useState({
     username: '',
     email: '',
     password: '',
     confirmPassword: '',
   });
+  
+  // State for handling UI feedback (errors, loading spinners, and success screens)
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
 
+  // Generic handler to update form state dynamically based on the input's 'name' attribute
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
+  // Handles traditional Email/Password registration
   const handleRegister = async (e: React.FormEvent) => {
-    e.preventDefault();
+    e.preventDefault(); // Prevent default form submission to handle it via AJAX
     setError('');
 
+    // Basic client-side validation
     if (formData.password !== formData.confirmPassword) {
       setError('Passwords do not match');
       return;
@@ -33,31 +40,36 @@ export default function RegisterPage() {
     setIsSubmitting(true);
 
     try {
+      // Send a POST request to our Django REST backend
       await apiClient.post('/api/users/register/', {
         email: formData.email,
         username: formData.username,
         password: formData.password,
         password_confirm: formData.confirmPassword,
       });
+      // If successful, switch the UI to the success screen
       setIsSuccess(true);
     } catch (err: unknown) {
+      // Error handling: parse the response from the Django backend to show meaningful messages
       const error = err as { response?: { data?: { detail?: string; email?: string[] } } };
       if (error.response?.data?.email) {
-        setError(error.response.data.email[0]);
+        setError(error.response.data.email[0]); // e.g., "Email already exists"
       } else if (error.response?.data?.detail) {
         setError(error.response.data.detail);
       } else {
         setError('Registration failed. Please try again.');
       }
     } finally {
-      setIsSubmitting(false);
+      setIsSubmitting(false); // Stop the loading spinner regardless of success or failure
     }
   };
 
+  // Initiates the Google OAuth 2.0 flow
   const handleGoogleRegister = async () => {
     setError('');
     setIsSubmitting(true);
     try {
+      // Fetch the Google authorization URL from our backend and redirect the user
       const authUrl = await getGoogleAuthUrl();
       window.location.href = authUrl;
     } catch {
@@ -66,10 +78,12 @@ export default function RegisterPage() {
     }
   };
 
+  // Initiates the GitHub OAuth flow
   const handleGitHubRegister = async () => {
     setError('');
     setIsSubmitting(true);
     try {
+      // Fetch the GitHub authorization URL from our backend and redirect the user
       const authUrl = await getGitHubAuthUrl();
       window.location.href = authUrl;
     } catch {
@@ -78,6 +92,7 @@ export default function RegisterPage() {
     }
   };
 
+  // Conditional Rendering: Show success screen if registration passed
   if (isSuccess) {
     return (
       <div style={styles.container}>
@@ -93,12 +108,14 @@ export default function RegisterPage() {
     );
   }
 
+  // Default Rendering: Show the registration form
   return (
     <div style={styles.container}>
       <div style={styles.card}>
         <h1 style={styles.title}>Create Account</h1>
         <p style={styles.subtitle}>Start tracking your target roles today</p>
 
+        {/* Display error messages dynamically if they exist */}
         {error && (
           <div style={styles.errorBox} role="alert">
             <AlertCircle size={18} style={{ minWidth: '18px' }} />
@@ -171,6 +188,7 @@ export default function RegisterPage() {
           <span style={styles.dividerText}>or register with</span>
         </div>
 
+        {/* Social Authentication Providers */}
         <div style={styles.socialGroup}>
           <button
             type="button"
@@ -178,6 +196,7 @@ export default function RegisterPage() {
             style={styles.socialButton}
             disabled={isSubmitting}
           >
+            {/* Embedded SVG for Google logo to reduce external network requests */}
             <svg viewBox="0 0 24 24" width="20" height="20" xmlns="http://www.w3.org/2000/svg">
               <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
               <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
@@ -206,6 +225,7 @@ export default function RegisterPage() {
   );
 }
 
+// Styling uses CSS Variables (e.g., var(--bg-primary)) to fully support the Light/Dark mode theme engine
 const styles: { [key: string]: React.CSSProperties } = {
   container: {
     display: 'flex',
