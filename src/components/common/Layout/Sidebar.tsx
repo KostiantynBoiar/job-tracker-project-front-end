@@ -69,7 +69,11 @@ export default function Sidebar() {
     <aside style={styles.sidebar}>
       {/* Brand Header */}
       <div style={styles.sidebarHeader}>
-        <h1 style={styles.logoText}>FAANG<span style={{color: '#3b82f6'}}>Tracker</span></h1>
+        <Link href="/jobs" style={{ textDecoration: 'none', cursor: 'pointer' }}>
+          <h1 style={styles.logoText}>
+            FAANG<span style={{color: '#3b82f6'}}>Tracker</span>
+          </h1>
+        </Link>
       </div>
 
       {/* Navigation Links */}

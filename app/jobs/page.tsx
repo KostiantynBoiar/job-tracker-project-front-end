@@ -1,24 +1,17 @@
 'use client';
 
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { Search, Filter, X, Bookmark, MapPin, Calendar, DollarSign, ExternalLink, Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
-import { getJobs, getSavedJobs, saveJob, unsaveJob, Job, SavedJob } from '../../src/api/jobs';
+import { getJobs, getSavedJobs, saveJob, unsaveJob, getJobCompanies, Job, SavedJob, CompanyOption } from '../../src/api/jobs';
 import ProtectedRoute from '../../src/components/auth/ProtectedRoute/ProtectedRoute';
-
-const EMPLOYMENT_TYPES = [
-  { value: 'full_time', label: 'Full-time' },
-  { value: 'part_time', label: 'Part-time' },
-  { value: 'contract', label: 'Contract' },
-  { value: 'internship', label: 'Internship' },
-];
 
 const PAGE_SIZE_OPTIONS = [10, 20, 50, 100];
 
 export default function JobsPage() {
   const router = useRouter();
   
-  // 🕵️ SENIOR FIX: Responsive state to handle mobile stacking
+  // Responsive state to handle mobile stacking
   const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
@@ -32,69 +25,115 @@ export default function JobsPage() {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [totalCount, setTotalCount] = useState(0);
   const [savedJobs, setSavedJobs] = useState<SavedJob[]>([]);
-  const [companies, setCompanies] = useState<string[]>([]);
+  const [companies, setCompanies] = useState<CompanyOption[]>([]);
   
-  // Loading/error state
   const [isLoading, setIsLoading] = useState(true);
+  const [isFiltering, setIsFiltering] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [savingJobId, setSavingJobId] = useState<number | null>(null);
   
-  // Filter state
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCompanies, setSelectedCompanies] = useState<string[]>([]);
-  const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
+  const [isRemoteOnly, setIsRemoteOnly] = useState(false);
   const [sortBy, setSortBy] = useState<'date' | 'salary' | 'company'>('date');
   const [showMobileFilters, setShowMobileFilters] = useState(false);
   
-  // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
+  
+  const debounceRef = useRef<NodeJS.Timeout | null>(null);
+  const isInitialMount = useRef(true);
 
-  // Fetch jobs with server-side pagination
-  const fetchJobs = useCallback(async () => {
+  useEffect(() => {
+    const loadCompanies = async () => {
+      try {
+        const data = await getJobCompanies();
+        setCompanies(data);
+      } catch (err) {
+        console.error('Failed to fetch companies:', err);
+      }
+    };
+    loadCompanies();
+  }, []);
+
+  const fetchJobs = useCallback(async (showFullLoader = false) => {
     try {
-      setIsLoading(true);
+      if (showFullLoader) {
+        setIsLoading(true);
+      } else {
+        setIsFiltering(true);
+      }
       setError(null);
       
       const [jobsResponse, savedJobsData] = await Promise.all([
-        getJobs({ page: currentPage, pageSize, sortBy, order: 'desc' }),
+        getJobs({ 
+          page: currentPage, 
+          pageSize, 
+          sortBy, 
+          order: 'desc',
+          search: searchQuery || undefined,
+          company: selectedCompanies.length > 0 ? selectedCompanies : undefined,
+          isRemote: isRemoteOnly || undefined,
+        }),
         getSavedJobs(),
       ]);
       
       setJobs(jobsResponse.results);
       setTotalCount(jobsResponse.count);
       setSavedJobs(savedJobsData);
-      
-      // Extract unique company names for filters from current page
-      const uniqueCompanies = [...new Set(jobsResponse.results.map(job => job.company.name))].sort();
-      setCompanies(prev => {
-        const merged = [...new Set([...prev, ...uniqueCompanies])].sort();
-        return merged;
-      });
     } catch (err) {
       console.error('Failed to fetch jobs:', err);
       setError('Failed to load jobs. Please try again later.');
     } finally {
       setIsLoading(false);
+      setIsFiltering(false);
     }
-  }, [currentPage, pageSize, sortBy]);
+  }, [currentPage, pageSize, sortBy, searchQuery, selectedCompanies, isRemoteOnly]);
 
   useEffect(() => {
-    fetchJobs();
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      fetchJobs(true);
+      return;
+    }
+    
+    if (debounceRef.current) {
+      clearTimeout(debounceRef.current);
+    }
+    
+    debounceRef.current = setTimeout(() => {
+      fetchJobs(false);
+    }, 300);
+    
+    return () => {
+      if (debounceRef.current) {
+        clearTimeout(debounceRef.current);
+      }
+    };
   }, [fetchJobs]);
 
-  // Reset to page 1 when page size changes
   const handlePageSizeChange = (newSize: number) => {
     setPageSize(newSize);
     setCurrentPage(1);
   };
 
-  // Check if job is saved
+  const handleFilterChange = <T,>(
+    value: T,
+    selected: T[],
+    setSelected: React.Dispatch<React.SetStateAction<T[]>>
+  ) => {
+    if (selected.includes(value)) {
+      setSelected(selected.filter((item) => item !== value));
+    } else {
+      setSelected([...selected, value]);
+    }
+    setCurrentPage(1);
+  };
+
   const getSavedJob = (jobId: number): SavedJob | undefined => {
     return savedJobs.find((sj) => sj.job.id === jobId);
   };
 
-  // Toggle save job
   const handleToggleSave = async (jobId: number) => {
     const savedJob = getSavedJob(jobId);
     setSavingJobId(jobId);
@@ -114,37 +153,19 @@ export default function JobsPage() {
     }
   };
 
-  // Filter jobs (client-side filtering on current page results)
-  const filteredJobs = useMemo(() => {
-    return jobs.filter((job) => {
-      if (searchQuery) {
-        const query = searchQuery.toLowerCase();
-        const matchesSearch =
-          job.title.toLowerCase().includes(query) ||
-          job.company.name.toLowerCase().includes(query) ||
-          (job.location?.city?.toLowerCase().includes(query) ?? false) ||
-          (job.location?.country?.toLowerCase().includes(query) ?? false);
-        if (!matchesSearch) return false;
-      }
+  const clearFilters = () => {
+    setSelectedCompanies([]);
+    setIsRemoteOnly(false);
+    setSearchQuery('');
+    setCurrentPage(1);
+  };
 
-      if (selectedCompanies.length > 0 && !selectedCompanies.includes(job.company.name)) {
-        return false;
-      }
+  const hasActiveFilters = selectedCompanies.length > 0 || isRemoteOnly || searchQuery !== '';
 
-      if (selectedTypes.length > 0 && job.employment_type && !selectedTypes.includes(job.employment_type)) {
-        return false;
-      }
-
-      return true;
-    });
-  }, [jobs, searchQuery, selectedCompanies, selectedTypes]);
-
-  // Pagination calculations (server-side)
   const totalPages = Math.ceil(totalCount / pageSize);
-  const startIndex = (currentPage - 1) * pageSize + 1;
+  const startIndex = totalCount > 0 ? (currentPage - 1) * pageSize + 1 : 0;
   const endIndex = Math.min(currentPage * pageSize, totalCount);
 
-  // Generate page numbers to display
   const getPageNumbers = () => {
     const pages: (number | string)[] = [];
     const maxVisiblePages = isMobile ? 3 : 5; // Simpler pagination on mobile
@@ -174,29 +195,6 @@ export default function JobsPage() {
     return pages;
   };
 
-  // Toggle filter
-  const toggleFilter = (
-    value: string,
-    selected: string[],
-    setSelected: React.Dispatch<React.SetStateAction<string[]>>
-  ) => {
-    if (selected.includes(value)) {
-      setSelected(selected.filter((item) => item !== value));
-    } else {
-      setSelected([...selected, value]);
-    }
-  };
-
-  // Clear all filters
-  const clearFilters = () => {
-    setSelectedCompanies([]);
-    setSelectedTypes([]);
-    setSearchQuery('');
-  };
-
-  const hasActiveFilters = selectedCompanies.length > 0 || selectedTypes.length > 0 || searchQuery !== '';
-
-  // Format salary
   const formatSalary = (job: Job): string | null => {
     if (!job.salary_min && !job.salary_max) return null;
     const currency = job.salary_currency || '$';
@@ -206,7 +204,6 @@ export default function JobsPage() {
     return `${currency}${min || max}`;
   };
 
-  // Format location
   const formatLocation = (job: Job): string => {
     if (job.is_remote) return 'Remote';
     if (!job.location) return 'Not specified';
@@ -214,7 +211,6 @@ export default function JobsPage() {
     return parts.join(', ') || 'Not specified';
   };
 
-  // Format posted date
   const formatPostedDate = (dateStr: string | null): string => {
     if (!dateStr) return 'Recently';
     const date = new Date(dateStr);
@@ -229,7 +225,10 @@ export default function JobsPage() {
     return `${Math.floor(diffDays / 30)} months ago`;
   };
 
-  // Sidebar filters
+  const capitalizeFirst = (str: string): string => {
+    return str.charAt(0).toUpperCase() + str.slice(1);
+  };
+
   const FiltersContent = () => (
     <>
       <div style={styles.filterHeader}>
@@ -243,45 +242,41 @@ export default function JobsPage() {
 
       <div style={styles.filterGroup}>
         <h3 style={styles.filterGroupTitle}>Company</h3>
-        <div style={isMobile ? styles.chipContainer : {}}>
-          {companies.length > 0 ? (
-            companies.map((company) => (
-              <label key={company} style={{...styles.checkboxLabel, ...(isMobile ? styles.chipLabel : {})}}>
-                <input
-                  type="checkbox"
-                  checked={selectedCompanies.includes(company)}
-                  onChange={() => toggleFilter(company, selectedCompanies, setSelectedCompanies)}
-                  style={styles.checkbox}
-                />
-                <span>{company}</span>
-              </label>
-            ))
-          ) : (
-            <p style={styles.noFiltersText}>No companies available</p>
-          )}
-        </div>
+        {companies.length > 0 ? (
+          companies.map((company) => (
+            <label key={company.id} style={styles.checkboxLabel}>
+              <input
+                type="checkbox"
+                checked={selectedCompanies.includes(company.name)}
+                onChange={() => handleFilterChange(company.name, selectedCompanies, setSelectedCompanies)}
+                style={styles.checkbox}
+              />
+              <span>{capitalizeFirst(company.name)}</span>
+            </label>
+          ))
+        ) : (
+          <p style={styles.noFiltersText}>No companies available</p>
+        )}
       </div>
 
       <div style={styles.filterGroup}>
-        <h3 style={styles.filterGroupTitle}>Job Type</h3>
-        <div style={isMobile ? styles.chipContainer : {}}>
-          {EMPLOYMENT_TYPES.map((type) => (
-            <label key={type.value} style={{...styles.checkboxLabel, ...(isMobile ? styles.chipLabel : {})}}>
-              <input
-                type="checkbox"
-                checked={selectedTypes.includes(type.value)}
-                onChange={() => toggleFilter(type.value, selectedTypes, setSelectedTypes)}
-                style={styles.checkbox}
-              />
-              <span>{type.label}</span>
-            </label>
-          ))}
-        </div>
+        <h3 style={styles.filterGroupTitle}>Work Type</h3>
+        <label style={styles.checkboxLabel}>
+          <input
+            type="checkbox"
+            checked={isRemoteOnly}
+            onChange={() => {
+              setIsRemoteOnly(!isRemoteOnly);
+              setCurrentPage(1);
+            }}
+            style={styles.checkbox}
+          />
+          <span>Remote only</span>
+        </label>
       </div>
     </>
   );
 
-  // Job Card
   const JobCard = ({ job }: { job: Job }) => {
     const savedJob = getSavedJob(job.id);
     const isSaved = !!savedJob;
@@ -293,12 +288,12 @@ export default function JobsPage() {
         <div style={styles.cardHeader}>
           {job.company.logo_url && (
             <div style={styles.companyLogo}>
-              <img src={job.company.logo_url} alt={job.company.name} style={styles.logoImg} />
+              <img src={job.company.logo_url} alt={capitalizeFirst(job.company.name)} style={styles.logoImg} />
             </div>
           )}
           <div style={styles.cardInfo}>
             <h3 style={styles.cardTitle}>{job.title}</h3>
-            <p style={styles.cardCompany}>{job.company.name}</p>
+            <p style={styles.cardCompany}>{capitalizeFirst(job.company.name)}</p>
           </div>
           <button
             onClick={() => handleToggleSave(job.id)}
@@ -351,7 +346,6 @@ export default function JobsPage() {
     );
   };
 
-  // Loading state
   if (isLoading) {
     return (
       <ProtectedRoute>
@@ -363,7 +357,6 @@ export default function JobsPage() {
     );
   }
 
-  // Error state
   if (error) {
     return (
       <ProtectedRoute>
@@ -399,11 +392,14 @@ export default function JobsPage() {
                 type="text"
                 placeholder="Search jobs, companies, locations..."
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  setCurrentPage(1);
+                }}
                 style={styles.searchInput}
               />
               {searchQuery && (
-                <button onClick={() => setSearchQuery('')} style={styles.clearSearchButton}>
+                <button onClick={() => { setSearchQuery(''); setCurrentPage(1); }} style={styles.clearSearchButton}>
                   <X size={16} />
                 </button>
               )}
@@ -444,14 +440,20 @@ export default function JobsPage() {
 
           {/* Results Count */}
           <p style={styles.resultsText}>
-            Showing <strong>{startIndex}-{endIndex}</strong> of {totalCount} jobs
-            {hasActiveFilters && ` (${filteredJobs.length} matching filters on this page)`}
+            {isFiltering ? (
+              <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} />
+                Filtering...
+              </span>
+            ) : (
+              <>Showing <strong>{startIndex}-{endIndex}</strong> of <strong>{totalCount}</strong> jobs</>
+            )}
           </p>
 
           {/* Job List */}
-          <div style={styles.jobList}>
-            {filteredJobs.length > 0 ? (
-              filteredJobs.map((job) => <JobCard key={job.id} job={job} />)
+          <div style={{ ...styles.jobList, opacity: isFiltering ? 0.6 : 1, transition: 'opacity 0.2s' }}>
+            {jobs.length > 0 ? (
+              jobs.map((job) => <JobCard key={job.id} job={job} />)
             ) : (
               <div style={styles.noResults}>
                 <Bookmark size={48} style={{ color: 'var(--text-secondary)', marginBottom: '16px' }} />
@@ -537,7 +539,6 @@ export default function JobsPage() {
   );
 }
 
-// 🕵️ SENIOR DEV FIX: All hardcoded colors removed!
 // Box-sizing, width: 100%, and min-width: 0 added to prevent mobile layout breakages.
 const styles: { [key: string]: React.CSSProperties } = {
   pageContainer: {
@@ -585,7 +586,7 @@ const styles: { [key: string]: React.CSSProperties } = {
   },
   retryButton: {
     padding: '12px 24px',
-    backgroundColor: '#3b82f6',
+    backgroundColor: 'var(--accent-color)',
     color: '#fff',
     border: 'none',
     borderRadius: '8px',
@@ -616,7 +617,7 @@ const styles: { [key: string]: React.CSSProperties } = {
   clearButton: {
     background: 'none',
     border: 'none',
-    color: '#3b82f6',
+    color: 'var(--accent-color)',
     cursor: 'pointer',
     fontSize: '0.875rem',
   },
@@ -642,7 +643,7 @@ const styles: { [key: string]: React.CSSProperties } = {
     width: '16px',
     height: '16px',
     cursor: 'pointer',
-    accentColor: '#3b82f6',
+    accentColor: 'var(--accent-color)',
   },
   noFiltersText: {
     color: 'var(--text-secondary)',
@@ -747,7 +748,7 @@ const styles: { [key: string]: React.CSSProperties } = {
   clearFiltersButton: {
     marginTop: '16px',
     padding: '10px 20px',
-    backgroundColor: '#3b82f6',
+    backgroundColor: 'var(--accent-color)',
     color: '#fff',
     border: 'none',
     borderRadius: '6px',
@@ -802,7 +803,7 @@ const styles: { [key: string]: React.CSSProperties } = {
   },
   cardCompany: {
     fontSize: '0.95rem',
-    color: '#3b82f6',
+    color: 'var(--accent-color)',
     margin: '4px 0 0 0',
   },
   saveButton: {
@@ -818,8 +819,8 @@ const styles: { [key: string]: React.CSSProperties } = {
     flexShrink: 0,
   },
   saveButtonSaved: {
-    backgroundColor: '#3b82f6',
-    borderColor: '#3b82f6',
+    backgroundColor: 'var(--accent-color)',
+    borderColor: 'var(--accent-color)',
     color: '#fff',
   },
   cardMeta: {
@@ -860,7 +861,7 @@ const styles: { [key: string]: React.CSSProperties } = {
     alignItems: 'center',
     justifyContent: 'center',
     gap: '8px',
-    backgroundColor: '#3b82f6',
+    backgroundColor: 'var(--accent-color)',
     color: '#fff',
     borderRadius: '8px',
     textDecoration: 'none',
@@ -942,7 +943,7 @@ const styles: { [key: string]: React.CSSProperties } = {
   applyFiltersButton: {
     width: '100%',
     padding: '14px',
-    backgroundColor: '#3b82f6',
+    backgroundColor: 'var(--accent-color)',
     color: '#fff',
     border: 'none',
     borderRadius: '8px',
